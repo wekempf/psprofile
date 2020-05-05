@@ -1,0 +1,157 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+    </TN>
+    <MS>
+      <S N="Name">z</S>
+      <Obj N="Version" RefId="1">
+        <TN RefId="1">
+          <T>NuGet.Versioning.NuGetVersion</T>
+          <T>NuGet.Versioning.SemanticVersion</T>
+          <T>System.Object</T>
+        </TN>
+        <ToString>1.1.11</ToString>
+        <Props>
+          <Version N="Version">1.1.11.0</Version>
+          <B N="IsLegacyVersion">false</B>
+          <I32 N="Revision">0</I32>
+          <B N="IsSemVer2">false</B>
+          <S N="OriginalVersion">1.1.11</S>
+          <I32 N="Major">1</I32>
+          <I32 N="Minor">1</I32>
+          <I32 N="Patch">11</I32>
+          <Obj N="ReleaseLabels" RefId="2">
+            <TN RefId="2">
+              <T>System.String[]</T>
+              <T>System.Array</T>
+              <T>System.Object</T>
+            </TN>
+            <LST />
+          </Obj>
+          <S N="Release"></S>
+          <B N="IsPrerelease">false</B>
+          <B N="HasMetadata">false</B>
+          <S N="Metadata"></S>
+        </Props>
+      </Obj>
+      <S N="Type">Module</S>
+      <S N="Description">z lets you quickly navigate the file system in PowerShell based on your cd command history. It's a port of the z bash shell script</S>
+      <S N="Author">Vince Panuccio</S>
+      <S N="CompanyName"></S>
+      <Obj N="PublishedDate" RefId="3">
+        <TN RefId="3">
+          <T>System.DateTimeOffset</T>
+          <T>System.ValueType</T>
+          <T>System.Object</T>
+        </TN>
+        <ToString>02/24/2020 09:23:27 -05:00</ToString>
+        <Props>
+          <DT N="DateTime">2020-02-24T09:23:27.817</DT>
+          <DT N="UtcDateTime">2020-02-24T14:23:27.817Z</DT>
+          <DT N="LocalDateTime">2020-02-24T09:23:27.817-05:00</DT>
+          <DT N="Date">2020-02-24T00:00:00</DT>
+          <I32 N="Day">24</I32>
+          <S N="DayOfWeek">Monday</S>
+          <I32 N="DayOfYear">55</I32>
+          <I32 N="Hour">9</I32>
+          <I32 N="Millisecond">817</I32>
+          <I32 N="Minute">23</I32>
+          <I32 N="Month">2</I32>
+          <TS N="Offset">-PT5H</TS>
+          <I32 N="Second">27</I32>
+          <I64 N="Ticks">637181330078170000</I64>
+          <I64 N="UtcTicks">637181510078170000</I64>
+          <TS N="TimeOfDay">PT9H23M27.817S</TS>
+          <I32 N="Year">2020</I32>
+        </Props>
+      </Obj>
+      <DT N="InstalledDate">2020-04-13T10:39:11.4173459-04:00</DT>
+      <Nil N="LicenseUri" />
+      <URI N="ProjectUri">https://github.com/vincpa/z</URI>
+      <Nil N="IconUri" />
+      <Obj N="Includes" RefId="4">
+        <TN RefId="4">
+          <T>System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.Collections.Generic.List`1[[System.String, System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <Obj RefId="5">
+            <TN RefId="5">
+              <T>System.Collections.Generic.KeyValuePair`2[[System.String, System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.Collections.Generic.List`1[[System.String, System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]</T>
+              <T>System.ValueType</T>
+              <T>System.Object</T>
+            </TN>
+            <ToString>[DscResource, System.Collections.Generic.List`1[System.String]]</ToString>
+            <Props>
+              <S N="Key">DscResource</S>
+              <Obj N="Value" RefId="6">
+                <TN RefId="6">
+                  <T>System.Collections.Generic.List`1[[System.String, System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]</T>
+                  <T>System.Object</T>
+                </TN>
+                <LST />
+              </Obj>
+            </Props>
+          </Obj>
+          <Obj RefId="7">
+            <TNRef RefId="5" />
+            <ToString>[Command, System.Collections.Generic.List`1[System.String]]</ToString>
+            <Props>
+              <S N="Key">Command</S>
+              <Obj N="Value" RefId="8">
+                <TNRef RefId="6" />
+                <LST>
+                  <S>z</S>
+                  <S>cdX</S>
+                  <S>popdX</S>
+                  <S>pushdX</S>
+                </LST>
+              </Obj>
+            </Props>
+          </Obj>
+          <Obj RefId="9">
+            <TNRef RefId="5" />
+            <ToString>[Function, System.Collections.Generic.List`1[System.String]]</ToString>
+            <Props>
+              <S N="Key">Function</S>
+              <Obj N="Value" RefId="10">
+                <TNRef RefId="6" />
+                <LST>
+                  <S>z</S>
+                  <S>cdX</S>
+                  <S>popdX</S>
+                  <S>pushdX</S>
+                </LST>
+              </Obj>
+            </Props>
+          </Obj>
+          <Obj RefId="11">
+            <TNRef RefId="5" />
+            <ToString>[RoleCapability, System.Collections.Generic.List`1[System.String]]</ToString>
+            <Props>
+              <S N="Key">RoleCapability</S>
+              <Obj N="Value" RefId="12">
+                <TNRef RefId="6" />
+                <LST />
+              </Obj>
+            </Props>
+          </Obj>
+        </LST>
+      </Obj>
+      <S N="PowerShellGetFormatVersion">3</S>
+      <Obj N="Dependencies" RefId="13">
+        <TN RefId="7">
+          <T>System.Collections.Generic.List`1[[System.Collections.Generic.KeyValuePair`2[[System.String, System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[NuGet.Versioning.VersionRange, NuGet.Versioning, Version=5.4.0.3, Culture=neutral, PublicKeyToken=31bf3856ad364e35]], System.Private.CoreLib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]</T>
+          <T>System.Object</T>
+        </TN>
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">https://www.powershellgallery.com/api/v2</S>
+      <Nil N="InstalledLocation" />
+    </MS>
+  </Obj>
+</Objs>
