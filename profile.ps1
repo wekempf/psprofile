@@ -39,18 +39,22 @@ if (Get-Module -Name posh-git -ListAvailable) {
 # Load oh-my-posh
 if (Get-Module -Name oh-my-posh -ListAvailable) {
     Import-Module oh-my-posh
-    Set-Theme wek
-    #$ThemeSettings.Colors.AdminIconForegroundColor = 'Red'
-    #$ThemeSettings.Colors.GitForegroundColor = 'White'
-    #$ThemeSettings.Colors.GitDefaultColor = 'DarkGreen'
-    #$ThemeSettings.Colors.GitLocalChangesColor = 'DarkMagenta'
-    #$ThemeSettings.Colors.GetNoLocalChangesAndAheadColor = 'GoldenRod'
+    Set-PoshPrompt -Theme $ProfileDir\PoshThemes\wek-star.json
 }
 
 # Load Z
 if (Get-Module -Name Z -ListAvailable) {
     Import-Module Z
 }
+
+# Load PSColor
+if (Get-Module -Name PSColor -ListAvailable) {
+    Import-Module PSColor
+}
+
+# Configure PSReadline
+Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
+Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 
 # PowerShell parameter completion shim for the dotnet CLI 
 if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
@@ -69,7 +73,9 @@ if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
     Register-ArgumentCompleter -Native -CommandName nuke -ScriptBlock {
         param($commandName, $wordToComplete, $cursorPosition)
             nuke :complete "$wordToComplete" | ForEach-Object {
-                [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+                if (-not $_.StartsWith('NUKE Global Tool')) {
+                    [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+                }
             }
     }
 }
@@ -81,5 +87,3 @@ $env:DOTNET_NEW_LOCAL_SEARCH_FILE_ONLY = 1
 @(Join-Path $PSScriptRoot "machine\${env:COMPUTERNAME}\$($MyInvocation.MyCommand.Name)") |
     Where-Object { Test-Path $_ } |
     ForEach-Object { . $_ }
-
-Set-Location ~
