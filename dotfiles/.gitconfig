@@ -1,6 +1,6 @@
 [user]
 	name = William Kempf
-	email = bill.kempf@salliemae.com
+	email = wekempf@outlook.com
 
 [init]
 	defaultBranch = "main"
@@ -185,5 +185,12 @@
 	sslVerify = false
 	#sslcainfo = C:/Users/e79209
 
-[includeIf "gitdir:C:/repos/"]
-   path = .gitconfig-personal
+# Custom configuration includes
+# [include] includes unconditionally. If file doesn't exist, does nothing.
+# [includeIf "gitdir:/path/"] includes if in a repo within "/path/" (note: trailing / is important)
+# [includeIf "gitdir/i:/path/"] includes if in a repo within "/path/" ignoring case (note: trailing / is important)
+
+# Using a machine specific config that's not checked into psprofile to do things like change the user name/email for
+# work
+[include]
+	path = .gitconfig-machine

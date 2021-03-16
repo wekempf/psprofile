@@ -81,7 +81,7 @@ foreach ($dotfile in (Get-ChildItem -Path (Join-Path $PSScriptRoot 'dotfiles')))
     $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
     if (-not (Test-Path $destination -PathType Leaf)) {
         Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
-        New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile
+        New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
     }
 }
 
