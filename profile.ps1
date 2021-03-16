@@ -6,6 +6,15 @@ $IsAdmin = & {
     $prp.IsInRole($adm)
 }
 
+# Dot source functions
+(Join-Path $PSScriptRoot 'Functions'),(Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
+    Where-Object { Test-Path $_ } |
+    ForEach-Object {
+        Get-ChildItem $_ | ForEach-Object {
+            . $_.FullName
+        }
+    }
+
 # Configure environment variables
 Set-Variable -Name ProfileDir -Value (Split-Path $profile)
 Set-Variable -Name ModuleDir -Value (Join-Path $ProfileDir 'Modules')
@@ -16,45 +25,65 @@ else {
     $env:Editor = "notepad"
 }
 
-# Dot source functions
-(Join-Path $PSScriptRoot 'Functions'),(Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
-    Where-Object { Test-Path $_ } |
-    ForEach-Object {
-        Get-ChildItem $_ | ForEach-Object {
-            . $_.FullName
-        }
-    }
-
 # If we have a bin folder add it to the path
 if (Test-Path ~\bin) {
     Add-Path ~\bin
 }
 
-# Load posh-git
-if (Get-Module -Name posh-git -ListAvailable) {
-    Import-Module posh-git
-    $GitPromptSettings.DefaultPromptPath = '$(Get-ShortLocationName)'
+# Ensure we have scoop installed
+if (-not (Get-Command -Name scoop)) {
+    Write-Warning "Cannot find 'scoop'. Installing..."
+    Invoke-WebRequest -UseBasicParsing -Uri 'https://get.scoop.sh' | Invoke-Expression
 }
+
+# Load posh-git
+if (-not (Get-Module -Name posh-git -ListAvailable)) {
+    Install-Module -Name posh-git -Scope CurrentUser
+}
+Import-Module posh-git
+#$GitPromptSettings.DefaultPromptPath = '$(Get-ShortLocationName)'
 
 # Load oh-my-posh
-if (Get-Module -Name oh-my-posh -ListAvailable) {
-    Import-Module oh-my-posh
-    Set-PoshPrompt -Theme $ProfileDir\PoshThemes\wek-star.json
+# if (Get-Module -Name oh-my-posh -ListAvailable) {
+#     Import-Module oh-my-posh
+#     Set-PoshPrompt -Theme $ProfileDir\PoshThemes\wek-star.json
+# }
+
+# Configure Starship as our prompt
+if (-not (Get-Command -Name starship)) {
+    scoop install starship
 }
+Invoke-Expression (&starship init powershell)
 
 # Load Z
-if (Get-Module -Name Z -ListAvailable) {
-    Import-Module Z
+if (-not (Get-Module -Name Z -ListAvailable)) {
+    Install-Module -Name Z -Scope CurrentUser
 }
+Import-Module Z
 
 # Load PSColor
-if (Get-Module -Name PSColor -ListAvailable) {
-    Import-Module PSColor
-}
+# if (Get-Module -Name PSColor -ListAvailable) {
+#     Import-Module PSColor
+# }
 
 # Configure PSReadline
+$PSReadLineOPtions = @{
+    HistoryNoDuplicates = $true
+    HistorySearchCursorMovesToEnd = $true
+    BellStyle = 'visual'
+}
+Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+
+# Create SymLinks for dotfiles
+foreach ($dotfile in (Get-ChildItem -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
+    $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
+    if (-not (Test-Path $destination -PathType Leaf)) {
+        Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
+        New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile
+    }
+}
 
 # PowerShell parameter completion shim for the dotnet CLI 
 if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
@@ -65,6 +94,8 @@ if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
                 [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
             }
     }
+} else {
+    Write-Information "Command 'dotnet' not found."
 }
 
 # PowerShell parameter completion shim for the nuke CLI 
@@ -78,6 +109,8 @@ if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
                 }
             }
     }
+} else {
+    Write-Information "Command 'nuke' not found."
 }
 
 # Hopefully temporary fix for "dotnet new" slowness (https://github.com/dotnet/templating/issues/2093)
@@ -87,3 +120,4 @@ $env:DOTNET_NEW_LOCAL_SEARCH_FILE_ONLY = 1
 @(Join-Path $PSScriptRoot "machine\${env:COMPUTERNAME}\$($MyInvocation.MyCommand.Name)") |
     Where-Object { Test-Path $_ } |
     ForEach-Object { . $_ }
+

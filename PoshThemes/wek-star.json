@@ -88,7 +88,8 @@
                     "foreground": "#98C379",
                     "background": "",
                     "properties": {
-                      "prefix": " \uE235 "
+                      "prefix": " \uE235 ",
+                      "display_virtual_env": true
                     }
                 },
                 {
