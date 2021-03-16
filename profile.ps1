@@ -36,6 +36,29 @@ if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
     Invoke-WebRequest -UseBasicParsing -Uri 'https://get.scoop.sh' | Invoke-Expression
 }
 
+# Create SymLinks for dotfiles
+foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
+    $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
+    if (-not (Test-Path $destination -PathType Leaf)) {
+        if ($IsAdmin) {
+            Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
+            New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
+        } else {
+            Write-Warning "Unable to create symlink for '$destination'. Open an elevated PowerShell to create the symlink."
+        }
+    }
+}
+if (-not (Test-Path ~/.config)) {
+    New-Item -Path ~/.config -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+}
+if (-not (Test-Path ~/.config/starship.toml)) {
+    if ($IsAdmin) {
+        New-Item -Path ~/.config/starship.toml -ItemType SymbolicLink -Value (Join-Path $PSScriptRoot 'dotfiles/.config/starship.toml') | Out-Null
+    } else {
+        Write-Warning "Unable to create symlink for '$(Join-Path (Resolve-Path ~) .config/starship.toml)'. Open an elevated PowerShell to create the symlink."
+    }
+}
+
 # Load posh-git
 if (-not (Get-Module -Name posh-git -ListAvailable)) {
     Install-Module -Name posh-git -Scope CurrentUser -Repository PSGallery
@@ -75,19 +98,6 @@ $PSReadLineOPtions = @{
 Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
-
-# Create SymLinks for dotfiles
-foreach ($dotfile in (Get-ChildItem -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
-    $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
-    if (-not (Test-Path $destination -PathType Leaf)) {
-        if ($IsAdmin) {
-            Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
-            New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
-        } else {
-            Write-Warning "Unable to create symlink for .gitconfig. Open an elevated PowerShell to create the symlink."
-        }
-    }
-}
 
 # PowerShell parameter completion shim for the dotnet CLI 
 if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
