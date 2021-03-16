@@ -57,7 +57,7 @@ Invoke-Expression (&starship init powershell)
 
 # Load Z
 if (-not (Get-Module -Name Z -ListAvailable)) {
-    Install-Module -Name Z -Scope CurrentUser -Repository PSGallery
+    Install-Module -Name Z -Scope CurrentUser -Repository PSGallery -AllowClobber
 }
 Import-Module Z
 
