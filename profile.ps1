@@ -38,7 +38,7 @@ if (-not (Get-Command -Name scoop)) {
 
 # Load posh-git
 if (-not (Get-Module -Name posh-git -ListAvailable)) {
-    Install-Module -Name posh-git -Scope CurrentUser
+    Install-Module -Name posh-git -Scope CurrentUser -Repository PSGallery
 }
 Import-Module posh-git
 #$GitPromptSettings.DefaultPromptPath = '$(Get-ShortLocationName)'
@@ -57,7 +57,7 @@ Invoke-Expression (&starship init powershell)
 
 # Load Z
 if (-not (Get-Module -Name Z -ListAvailable)) {
-    Install-Module -Name Z -Scope CurrentUser
+    Install-Module -Name Z -Scope CurrentUser -Repository PSGallery
 }
 Import-Module Z
 
