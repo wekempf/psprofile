@@ -18,7 +18,7 @@ $IsAdmin = & {
 # Configure environment variables
 Set-Variable -Name ProfileDir -Value (Split-Path $profile)
 Set-Variable -Name ModuleDir -Value (Join-Path $ProfileDir 'Modules')
-if (Get-Command 'code' -ErrorAction SilentlyContinue) {
+if (Get-Command -Name code -ErrorAction SilentlyContinue) {
     $env:Editor = 'code'
 }
 else {
@@ -31,7 +31,7 @@ if (Test-Path ~\bin) {
 }
 
 # Ensure we have scoop installed
-if (-not (Get-Command -Name scoop)) {
+if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
     Write-Warning "Cannot find 'scoop'. Installing..."
     Invoke-WebRequest -UseBasicParsing -Uri 'https://get.scoop.sh' | Invoke-Expression
 }
@@ -50,7 +50,7 @@ Import-Module posh-git
 # }
 
 # Configure Starship as our prompt
-if (-not (Get-Command -Name starship)) {
+if (-not (Get-Command -Name starship -ErrorAction SilentlyContinue)) {
     scoop install starship
 }
 Invoke-Expression (&starship init powershell)
@@ -80,8 +80,12 @@ Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 foreach ($dotfile in (Get-ChildItem -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
     $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
     if (-not (Test-Path $destination -PathType Leaf)) {
-        Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
-        New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
+        if ($IsAdmin) {
+            Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
+            New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
+        } else {
+            Write-Warning "Unable to create symlink for .gitconfig. Open an elevated PowerShell to create the symlink."
+        }
     }
 }
 
