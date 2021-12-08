@@ -10,10 +10,13 @@ $IsAdmin = & {
 (Join-Path $PSScriptRoot 'Functions'),(Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
     Where-Object { Test-Path $_ } |
     ForEach-Object {
-        Get-ChildItem $_ | ForEach-Object {
+        Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
             . $_.FullName
         }
     }
+
+# Write banner
+Write-Host (ConvertTo-ASCIIArt -Text $env:COMPUTERNAME -Cache) -ForegroundColor ($IsAdmin ? 'Red' : 'Blue')
 
 # Configure environment variables
 Set-Variable -Name ProfileDir -Value (Split-Path $profile)
@@ -32,8 +35,18 @@ if (Test-Path ~\bin) {
 
 # Ensure we have scoop installed
 if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
-    Write-Warning "Cannot find 'scoop'. Installing..."
-    Invoke-WebRequest -UseBasicParsing -Uri 'https://get.scoop.sh' | Invoke-Expression
+    $scoopDir = "~/scoop/shims"
+    if (Test-Path $scoopDir) {
+        Add-Path (Resolve-Path $scoopDir)
+    } else {
+        if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
+            Write-Warning "Cannot find 'scoop'. Installing..."
+            Invoke-WebRequest -UseBasicParsing -Uri 'https://get.scoop.sh' | Invoke-Expression
+            if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
+                Add-Path (Resolve-Path $scoopDir)
+            }
+        }
+    }
 }
 
 # Create SymLinks for dotfiles
@@ -83,6 +96,10 @@ if (-not (Get-Module -Name Z -ListAvailable)) {
     Install-Module -Name Z -Scope CurrentUser -Repository PSGallery -AllowClobber
 }
 Import-Module Z
+
+if (Get-Module -Name AWS.Tools.Common -ListAvailable) {
+    Import-Module -Name AWS.Tools.Common
+}
 
 # Load PSColor
 # if (Get-Module -Name PSColor -ListAvailable) {
@@ -135,3 +152,18 @@ $env:DOTNET_NEW_LOCAL_SEARCH_FILE_ONLY = 1
     Where-Object { Test-Path $_ } |
     ForEach-Object { . $_ }
 
+# Display notice if there's profile changes
+Push-Location $ProfileDir
+try {
+    if (Get-Command -Name git -ErrorAction SilentlyContinue) {
+        if (-not (git status | Select-String 'nothing to commit')) {
+            Write-Warning "Profile changes need to be committed and pushed"
+        }
+        else {
+            git fetch
+        }
+    }
+}
+finally {
+    Pop-Location
+}

@@ -180,9 +180,9 @@
 [winUpdater]
 	recentlySeenVersion = 2.23.0.windows.1
 
-[http]
-	proxy = http://127.0.0.1:9000
-	sslVerify = false
+# [http]
+# 	proxy = http://127.0.0.1:9000
+# 	sslVerify = false
 	#sslcainfo = C:/Users/e79209
 
 # Custom configuration includes
@@ -194,3 +194,5 @@
 # work
 [include]
 	path = .gitconfig-machine
+[credential]
+	helper = manager-core

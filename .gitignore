@@ -1,2 +1,5 @@
-/machine
-/Modules
+machine/
+Modules/
+Functions/ascii-cache/
+Help/
+.ionide/
