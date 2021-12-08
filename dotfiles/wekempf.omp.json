@@ -122,7 +122,7 @@
                     "trailing_diamond": "",
                     "properties": {
                         "always_enabled": true,
-                        "prefix": "<transparent>\uE0B0</> \ufbab",
+                        "prefix": "<transparent>\uE0B0</> \ufbab<#83769c>.</>",
                         "postfix": "\u2800"
                     }
                 },
