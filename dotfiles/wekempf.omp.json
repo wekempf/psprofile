@@ -11,7 +11,7 @@
                     "leading_diamond": "╭─",
                     "trailing_diamond": "\uE0B0",
                     "properties": {
-                        "prefix": "\uf115  ",
+                        "prefix": "\uf115 ",
                         "home_icon": "~",
                         "folder_separator_icon": "/",
                         "folder_icon": "..",
@@ -36,7 +36,7 @@
                         "fetch_stash_count": true,
                         "fetch_upstream_icon": true,
                         "branch_max_length": 25,
-                        "template": "{{ .UpstreamIcon }} {{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }} \uF692 {{ .StashCount }}{{ end }}"
+                        "template": "{{ .UpstreamIcon }}{{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }} \uF692 {{ .StashCount }}{{ end }}"
                     }
                 },
                 {
