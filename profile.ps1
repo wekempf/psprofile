@@ -80,16 +80,17 @@ Import-Module posh-git
 #$GitPromptSettings.DefaultPromptPath = '$(Get-ShortLocationName)'
 
 # Load oh-my-posh
-# if (Get-Module -Name oh-my-posh -ListAvailable) {
-#     Import-Module oh-my-posh
-#     Set-PoshPrompt -Theme $ProfileDir\PoshThemes\wek-star.json
-# }
+if (-not (Get-Module -Name oh-my-posh -ListAvailable)) {
+    Install-Module -Name oh-my-posh -Scope CurrentUser -Repository PSGallery
+}
+Import-Module oh-my-posh
+oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
 
 # Configure Starship as our prompt
-if (-not (Get-Command -Name starship -ErrorAction SilentlyContinue)) {
-    scoop install starship
-}
-Invoke-Expression (&starship init powershell)
+# if (-not (Get-Command -Name starship -ErrorAction SilentlyContinue)) {
+#     scoop install starship
+# }
+# Invoke-Expression (&starship init powershell)
 
 # Load Z
 if (-not (Get-Module -Name Z -ListAvailable)) {
@@ -161,6 +162,12 @@ try {
         }
         else {
             git fetch
+            if ((git rev-list --count origin..HEAD) -gt 0) {
+                Write-Warning "Local profile changes need to be pushed"
+            }
+            elseif ((git rev-list --count HEAD..origin) -gt 0) {
+                Write-Warning "Remote profile changes need to be merged"
+            }
         }
     }
 }
