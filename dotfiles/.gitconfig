@@ -91,11 +91,6 @@
 	ec = config --global -e
 	# Edits the local config
 	elc = config -e
-	# Pulls changes, rebases local committs to come after anything pulled, removes remote-tracking branches that no longer exist and updates submodules.
-	# Use instead of git pull before creating a feature branch.
-	up = !git pull --rebase --prune $@ && git submodule update --init --recursive
-	# Removes local branches that have been removed on the remote (usually after completion of a pull request) .
-	gone = "!f() { git fetch ${1-origin} -p && for branch in `git branch -vv | grep ': gone]' | awk '{print $1}'`; do git branch -d $branch; done }; f"
 	# Commits all work with a SAVEPOINT commit message.
 	save = !git add -A && git commit -m 'SAVEPOINT'
 	# Commits with a WIP (Work In Progress) message.
@@ -108,12 +103,6 @@
 	amendc = commit -a --amend -C HEAD
 	# Commits everything, then wipes it out. The commit can still be accessed using git reflog to find it.
 	wipe = !git add -A && git commit -qpm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
-	# Deletes all branches already merged to develop. Accepts a parameter to use a branch other than develop.
-	bclean = "!f() { git branch --merged ${1-develop} | grep " feature/" | xargs -r git branch -d; }; f"
-	# Switches to develop the runs git up and git bclean. Accepts a parameter to use a branch other than develop.
-	bdone = "!f() { git checkout ${1-develop} && git up && git bclean ${1-develop}; }; f"
-	# Creates a feature branch off develop. Accepts a parameter to use a branch other than develop.
-	feat = "!f() { git checkout ${2-develop} && git up && git cob feature/${1}; }; f"
 	# Creates a hotfix branch off develop. Accepts a parameter to use a branch other than develop.
 	hotfix = "!f() { git checkout ${2-develop} && git up && git cob hotfix/${1}; }; f"
 	# Gets the current branch's name. Useful in other aliases.
@@ -160,10 +149,50 @@
     fw = "!git log --pretty=oneline --all | grep -B1 `git rev-parse HEAD` | head -n1 | egrep -o '[a-f0-9]{20,}' | xargs git checkout"
     bw = "!git checkout HEAD~1"
 	# Remove modified/added files.
-	wipe = clean -fd
+	wipef = clean -fd
 	# Return to a pristine checkout with no modified/added files.
-	pristine = "!git reset --hard; git clean -f -d"
+	pristine = "!git reset --hard; git clean -fd"
 	oldest-ancestor = !bash -c 'diff --old-line-format= --new-line-format= <(git rev-list --first-parent \"${1:-master}\") <(git rev-list --first-parent \"${2:-HEAD}\") | head -1' -
+
+	# Show the "default" branch
+	show-default = "!git remote show ${1-origin} | grep 'HEAD branch' | cut -d' ' -f5"
+	# Checks out the default branch
+	cod = "!git show-default | xargs git checkout"
+	# Pulls changes, rebases local committs to come after anything pulled, removes remote-tracking branches that no longer exist.
+	#   git up [additional-pull-options]
+	up = !git pull --rebase --prune $@ && git submodule update --init --recursive
+	# Deletes all branches already merged to the default branch. Accepts a parameter to use a branch other than the default branch.
+	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
+	#   git bclean [source-branch]
+	bclean = "!f() { git branch --merged ${1-$(git show-default)} | grep -e "feature/" -e "hotfix/" | xargs -r git branch -d; }; f"
+	# Removes local branches that have been removed on the remote (usually after completion of a pull request) .
+	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
+	#   git gone [remote]
+	gone = "!f() { git fetch ${1-origin} -p && for branch in `git branch -vv | grep ': gone]' | awk '{print $1}'`; do git branch -d $branch; done }; f"
+	# Force removes local branches that have been removed on the remote (usually after completion of a pull request).
+	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
+	#   git gonef [remote]
+	gonef = "!f() { git fetch ${1-origin} -p && for branch in `git branch -vv | grep ': gone]' | awk '{print $1}'`; do git branch -D $branch; done }; f"
+	# Switches to the default branch then runs git up and git bclean. Accepts a parameter to use a branch other than the default branch.
+	#   git bdone [source-branch] [remote]
+	bdone = "!f() { defbranch=${1-$(git show-default)} && git checkout $defbranch && git up && git bclean $defbranch && git gone ${2-origin}; }; f"
+	# Creates a feature branch off the default branch. Accepts a parameter to use a branch other than the default.
+	#   git nf <name> [source-branch]
+	nf = "!f() { git checkout ${2-$(git show-default)} && git up && git cob feature/${1}; }; f"
+	# Creates a hotfix branch off the default branch. Accepts a parameter to use a branch other than the default.
+	#   git nh <name> [source-branch]
+	nh = "!f() { git checkout ${2-$(git show-default)} && git up && git cob hotfix/${1}; }; f"
+	# Lists feature branches.
+	brf = !git branch | grep "feature/"
+	# Lists feature branches.
+	brh = !git branch | grep "hotfix/"
+	# Lists all (local and remote) feature branches.
+	braf = !git branch --all | grep "feature/"
+	# Lists all (local and remote) feature branches.
+	brah = !git branch --all | grep "hotfix/"
+	# Fetches latest and rebases current branch with remote default.
+	#   git fr [branch] [remote]
+	fr = !git fetch && git rebase ${2-origin}/${1-$(git show-default)}
 	
 [push]
 	default = simple
@@ -180,9 +209,9 @@
 [winUpdater]
 	recentlySeenVersion = 2.23.0.windows.1
 
-# [http]
-# 	proxy = http://127.0.0.1:9000
-# 	sslVerify = false
+[http]
+	proxy = http://127.0.0.1:9000
+	sslVerify = false
 	#sslcainfo = C:/Users/e79209
 
 # Custom configuration includes
@@ -194,5 +223,5 @@
 # work
 [include]
 	path = .gitconfig-machine
-[credential]
-	helper = manager-core
+[fetch]
+	prune = true
