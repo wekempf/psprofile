@@ -42,7 +42,7 @@
   
 [core]
 	#autocrlf = true
-	editor = \"C:\\Users\\e79209\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\" --wait
+	editor = \"C:\\Users\\e79209\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code\" --wait
 	excludesfile = ~/.gitignore
 	symlinks = false
 	autocrlf = true
