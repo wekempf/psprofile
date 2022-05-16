@@ -164,7 +164,7 @@
 	# Deletes all branches already merged to the default branch. Accepts a parameter to use a branch other than the default branch.
 	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
 	#   git bclean [source-branch]
-	bclean = "!f() { git branch --merged ${1-$(git show-default)} | grep -e "feature/" -e "hotfix/" | xargs -r git branch -d; }; f"
+	bclean = "!f() { git branch --merged ${1-$(git show-default)} | grep -e "feature/" -e "hotfix/" | xargs -r git branch -D; }; f"
 	# Removes local branches that have been removed on the remote (usually after completion of a pull request) .
 	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
 	#   git gone [remote]
