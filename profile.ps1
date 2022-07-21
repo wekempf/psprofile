@@ -33,22 +33,6 @@ if (Test-Path ~\bin) {
     Add-Path ~\bin
 }
 
-# Ensure we have scoop installed
-if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
-    $scoopDir = "~/scoop/shims"
-    if (Test-Path $scoopDir) {
-        Add-Path (Resolve-Path $scoopDir)
-    } else {
-        if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
-            Write-Warning "Cannot find 'scoop'. Installing..."
-            Invoke-WebRequest -UseBasicParsing -Uri 'https://get.scoop.sh' | Invoke-Expression
-            if (-not (Get-Command -Name scoop -ErrorAction SilentlyContinue)) {
-                Add-Path (Resolve-Path $scoopDir)
-            }
-        }
-    }
-}
-
 # Create SymLinks for dotfiles
 foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
     $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
@@ -61,51 +45,24 @@ foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfil
         }
     }
 }
-if (-not (Test-Path ~/.config)) {
-    New-Item -Path ~/.config -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-}
-if (-not (Test-Path ~/.config/starship.toml)) {
-    if ($IsAdmin) {
-        New-Item -Path ~/.config/starship.toml -ItemType SymbolicLink -Value (Join-Path $PSScriptRoot 'dotfiles/.config/starship.toml') | Out-Null
-    } else {
-        Write-Warning "Unable to create symlink for '$(Join-Path (Resolve-Path ~) .config/starship.toml)'. Open an elevated PowerShell to create the symlink."
+
+function Import-RequiredModule {
+    param(
+        [string[]]$Name
+    )
+
+    $Name | ForEach-Object {
+        if (-not (Get-Module -Name $_ -ListAvailable)) {
+            Install-Module -Name $_ -Scope CurrentUser -Repository PSGallery
+        }
+        Import-Module $_
     }
 }
 
-# Load posh-git
-if (-not (Get-Module -Name posh-git -ListAvailable)) {
-    Install-Module -Name posh-git -Scope CurrentUser -Repository PSGallery
-}
-Import-Module posh-git
-#$GitPromptSettings.DefaultPromptPath = '$(Get-ShortLocationName)'
+Import-RequiredModule posh-git,oh-my-posh,Z
 
-# Load oh-my-posh
-if (-not (Get-Module -Name oh-my-posh -ListAvailable)) {
-    Install-Module -Name oh-my-posh -Scope CurrentUser -Repository PSGallery
-}
-Import-Module oh-my-posh
+# Setup oh-my-posh
 oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
-
-# Configure Starship as our prompt
-# if (-not (Get-Command -Name starship -ErrorAction SilentlyContinue)) {
-#     scoop install starship
-# }
-# Invoke-Expression (&starship init powershell)
-
-# Load Z
-if (-not (Get-Module -Name Z -ListAvailable)) {
-    Install-Module -Name Z -Scope CurrentUser -Repository PSGallery -AllowClobber
-}
-Import-Module Z
-
-if (Get-Module -Name AWS.Tools.Common -ListAvailable) {
-    Import-Module -Name AWS.Tools.Common
-}
-
-# Load PSColor
-# if (Get-Module -Name PSColor -ListAvailable) {
-#     Import-Module PSColor
-# }
 
 # Configure PSReadline
 $PSReadLineOPtions = @{
@@ -116,6 +73,34 @@ $PSReadLineOPtions = @{
 Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+Set-PSReadlineKeyHandler -Key Ctrl+Shift+L `
+    -BriefDescription CopyPathToClipboard `
+    -LongDescription "Copies the current path to the clipboard" `
+    -ScriptBlock { (Resolve-Path -LiteralPath $pwd).ProviderPath.Trim() | clip }
+Set-PSReadLineKeyHandler -Key 'Alt+(' `
+                         -BriefDescription ParenthesizeSelection `
+                         -LongDescription "Put parenthesis around the selection or entire line and move the cursor to after the closing parenthesis" `
+                         -ScriptBlock {
+    param($key, $arg)
+
+    $selectionStart = $null
+    $selectionLength = $null
+    [Microsoft.PowerShell.PSConsoleReadLine]::GetSelectionState([ref]$selectionStart, [ref]$selectionLength)
+
+    $line = $null
+    $cursor = $null
+    [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+    if ($selectionStart -ne -1)
+    {
+        [Microsoft.PowerShell.PSConsoleReadLine]::Replace($selectionStart, $selectionLength, '(' + $line.SubString($selectionStart, $selectionLength) + ')')
+        [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($selectionStart + $selectionLength + 2)
+    }
+    else
+    {
+        [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $line.Length, '(' + $line + ')')
+        [Microsoft.PowerShell.PSConsoleReadLine]::EndOfLine()
+    }
+}
 
 # PowerShell parameter completion shim for the dotnet CLI 
 if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
