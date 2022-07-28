@@ -75,10 +75,6 @@ $PSReadLineOPtions = @{
 Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
-Set-PSReadlineKeyHandler -Key Ctrl+Shift+L `
-    -BriefDescription CopyPathToClipboard `
-    -LongDescription "Copies the current path to the clipboard" `
-    -ScriptBlock { (Resolve-Path -LiteralPath $pwd).ProviderPath.Trim() | clip }
 Set-PSReadLineKeyHandler -Key 'Alt+9' `
                          -BriefDescription ParenthesizeSelection `
                          -LongDescription "Put parenthesis around the selection or entire line and move the cursor to after the closing parenthesis" `
@@ -103,7 +99,7 @@ Set-PSReadLineKeyHandler -Key 'Alt+9' `
         [Microsoft.PowerShell.PSConsoleReadLine]::EndOfLine()
     }
 }
-Set-PSReadlineKeyHandler -Chord "Ctrl+'","Ctrl+Shift+'" `
+Set-PSReadlineKeyHandler -Chord "Ctrl+'","Ctrl+Shift+`"" `
                          -BriefDescription SmartInsertQuote `
                          -Description "Insert paired quotes if not already on a quote" `
                          -ScriptBlock {
@@ -141,6 +137,23 @@ Set-PSReadlineKeyHandler -Chord Alt+c `
     param($key, $arg)
 
     Set-Clipboard $pwd.Path
+}
+Set-PSReadlineKeyHandler -Chord Alt+v `
+                         -BriefDescription PasteAsHereString `
+                         -LongDescription "Paste the clipboard text as a here string" `
+                         -ScriptBlock {
+    param($key, $arg)
+
+    $clipboardText = Get-Clipboard
+    if ($clipboardText) {
+        # Remove trailing spaces, convert \r\n to \n, and remove the final \n.
+        $text =  $clipboardText.TrimEnd() -join "`n"
+        [Microsoft.PowerShell.PSConsoleReadLine]::Insert("@'`n$text`n'@")
+    }
+    else
+    {
+        [Microsoft.PowerShell.PSConsoleReadLine]::Ding()
+    }
 }
 Set-PSReadlineKeyHandler -Chord Alt+v `
                          -BriefDescription PasteAsHereString `
