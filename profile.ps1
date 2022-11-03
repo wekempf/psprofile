@@ -6,6 +6,20 @@ $IsAdmin = & {
     $prp.IsInRole($adm)
 }
 
+function Import-RequiredModule {
+    param(
+        [string[]]$Name,
+        [switch]$AllowClobber
+    )
+
+    $Name | ForEach-Object {
+        if (-not (Get-Module -Name $_ -ListAvailable)) {
+            Install-Module -Name $_ -Scope CurrentUser -AllowClobber:$AllowClobber # -Repository PSGallery
+        }
+        Import-Module $_
+    }
+}
+
 # Dot source functions
 (Join-Path $PSScriptRoot 'Functions'),(Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
     Where-Object { Test-Path $_ } |
@@ -16,7 +30,8 @@ $IsAdmin = & {
     }
 
 # Write banner
-Write-Host (ConvertTo-ASCIIArt -Text $env:COMPUTERNAME -Cache) -ForegroundColor ($IsAdmin ? 'Red' : 'Blue')
+Import-RequiredModule Figlet -AllowClobber
+Write-Figlet $env:COMPUTERNAME -Font big -Foreground ($IsAdmin ? 'Red' : 'Blue')
 
 # Configure environment variables
 Set-Variable -Name ProfileDir -Value (Split-Path $profile)
@@ -43,19 +58,6 @@ foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfil
         } else {
             Write-Warning "Unable to create symlink for '$destination'. Open an elevated PowerShell to create the symlink."
         }
-    }
-}
-
-function Import-RequiredModule {
-    param(
-        [string[]]$Name
-    )
-
-    $Name | ForEach-Object {
-        if (-not (Get-Module -Name $_ -ListAvailable)) {
-            Install-Module -Name $_ -Scope CurrentUser -Repository PSGallery
-        }
-        Import-Module $_
     }
 }
 
