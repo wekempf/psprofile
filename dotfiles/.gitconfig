@@ -6,28 +6,22 @@
 	defaultBranch = "main"
 
 [diff]
-	tool = semanticmerge
+	tool = vscode
 [difftool]
 	prompt = false
 [difftool "vscode"]
 	cmd = "code --wait --diff \"$LOCAL\" \"$REMOTE\""
 	trustExitCode = false
-[difftool "semanticmerge"]
-	cmd = \"C:\\Users\\e79209\\AppData\\Local\\semanticmerge\\semanticmergetool.exe\" -s \"$LOCAL\" -d \"$REMOTE\"
 
 [merge]
-	tool = semanticmerge
-	#tool = vscode
+	tool = vscode
 	conflictstyle = diff3
 [mergetool]
 	prompt = false
 	keepbackup = false
 [mergetool "vscode"]
-    cmd = "code --wait \"$MERGED\""
+    cmd = "code --wait --merge \"$REMOTE\" \"$LOCAL\" \"$BASE\" \"$MERGED\""
 	keepBackup = false
-[mergetool "semanticmerge"]
-	cmd = \"C:\\Users\\e79209\\AppData\\Local\\semanticmerge\\semanticmergetool.exe\" -s \"$REMOTE\" -d \"$LOCAL\" -b \"$BASE\" -r \"$MERGED\"
-	trustexitcode = true
 
 [color]
     ui = true
@@ -48,152 +42,6 @@
 	autocrlf = true
 	longpaths = true
 
-[alias]
-	# List aliases
-	alias = "!git config -l | grep ^alias\\. | cut -c 7-"
-	# Cherry pick
-	cp = cherry-pick
-	# Status
-	st = status
-	# Clone
-	cl = clone
-	# Commit
-	ci = commit
-	# Commit all with a comment
-	cm = !git add -A && git commit -m
-	# Checkout
-	co = checkout
-	# Checkout new branch
-	cob = checkout -b
-	# Branch
-	br = branch
-	# Unstage all.
-	unstage = reset HEAD --
-	# Show last commit
-	last = log -1 HEAD
-	# Shows last commit in "long format" (includes files committed)
-	dl = !git ll -1
-	# Graphical (ansi-text) log.
-	glog = log --oneline --abbrev-commit --all --graph
-	# Show formatted commits in "short" form.
-	ls = log --pretty=format:'%C(yellow)%h %ad%Cred%d %Creset%s%Cgreen [%cn]%Creset' --decorate --date=relative
-	# Show formatted commits in "long" form (includes files committed)
-	ll = log --pretty=format:'%C(yellow)%h%Cred%d %Creset%s%Cgreen [%cn]' --decorate --numstat
-	# Shows formatted commits with dates.
-	lds = log --pretty=format:"%C(yellow)%h\\ %ad%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --date=short
-	# Shows log with diffs
-	fl = log -u
-	# Shows commits where a file was added
-	fa = log --diff-filter=A --summary
-	# Shows commits where a file was deleted
-	fd = log --diff-filter=D --summary
-	# Edits the global config
-	ec = config --global -e
-	# Edits the local config
-	elc = config -e
-	# Commits all work with a SAVEPOINT commit message.
-	save = !git add -A && git commit -m 'SAVEPOINT'
-	# Commits with a WIP (Work In Progress) message.
-	wip = commit -am "WIP"
-	# Reset the previous commit but keep changes in working directory. Inverse of save/wip.
-	undo = reset HEAD~1 --mixed
-	# Ammends previous commit
-	amend = commit -a --amend
-	# Ammends previous commit with the same commit message
-	amendc = commit -a --amend -C HEAD
-	# Commits everything, then wipes it out. The commit can still be accessed using git reflog to find it.
-	wipe = !git add -A && git commit -qpm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
-	# Creates a hotfix branch off develop. Accepts a parameter to use a branch other than develop.
-	hotfix = "!f() { git checkout ${2-develop} && git up && git cob hotfix/${1}; }; f"
-	# Gets the current branch's name. Useful in other aliases.
-	branch-name = "!git rev-parse --abbrev-ref HEAD"
-	# Publishes the current branch to origin. Accepts a parameter to use another remote.
-	publish = "!f() { git push -u ${1-origin} $(git branch-name); }; f"
-	# Unpublishes the current branch (deletes it) from origin. Accepts a parameter to use another remote.
-	unpublish = "!f() { git push ${1-origin} :$(git branch-name); }; f"
-	# Runs the diff tool.
-	dt = difftool
-	# Runs the merge tool.
-	mt = mergetool
-	# Continues/completes a merge after conflicts resolved.
-	mc = merge --continue
-	# Lists feature branches using git flow.
-	fls = flow feature list
-	# Starts a feature branch using git flow.
-	fs = flow feature start
-	# Finishes a feature branch using git flow.
-	ff = flow feature finish -S
-	# Lists release branches using git flow.
-	rls = flow release feature list
-	# Starts a release branch using git flow.
-	rs = flow release start
-	# Finishes a release branch using git flow.
-	rf = flow release finish -S
-	# Lists hotfix branches using git flow.
-	hls = flow hotfix list
-	# Starts a hotfix branch using git flow.
-	hs = flow hotfix start
-	# Finishes a hotfix branch using git flow.
-	hf = flow hotfix finish -S
-	# Assumes a file to be unchanged.
-	assume = update-index --assume-unchanged
-	# Unassumes a file
-	unassume = update-index --no-assume-unchanged
-	# Show assumed files
-	assumed = "!git ls-files -v | grep ^h | cut -c 3-"
-	# Unassume all files
-	unassumeall = "!git assumed | xargs git update-index --no-assume-unchanged"
-	# Assume all files
-	assumeall = "!git st -s | awk {'print $2'} | xargs git assume"	
-	# Move forward/backward
-    fw = "!git log --pretty=oneline --all | grep -B1 `git rev-parse HEAD` | head -n1 | egrep -o '[a-f0-9]{20,}' | xargs git checkout"
-    bw = "!git checkout HEAD~1"
-	# Remove modified/added files.
-	wipef = clean -fd
-	# Return to a pristine checkout with no modified/added files.
-	pristine = "!git reset --hard; git clean -fd"
-	oldest-ancestor = !bash -c 'diff --old-line-format= --new-line-format= <(git rev-list --first-parent \"${1:-master}\") <(git rev-list --first-parent \"${2:-HEAD}\") | head -1' -
-
-	# Show the "default" branch
-	show-default = "!git remote show ${1-origin} | grep 'HEAD branch' | cut -d' ' -f5"
-	# Checks out the default branch
-	cod = "!git show-default | xargs git checkout"
-	# Pulls changes, rebases local committs to come after anything pulled, removes remote-tracking branches that no longer exist.
-	#   git up [additional-pull-options]
-	up = !git pull --rebase --prune $@ && git submodule update --init --recursive
-	# Deletes all branches already merged to the default branch. Accepts a parameter to use a branch other than the default branch.
-	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
-	#   git bclean [source-branch]
-	bclean = "!f() { git branch --merged ${1-$(git show-default)} | grep -e "feature/" -e "hotfix/" | xargs -r git branch -D; }; f"
-	# Removes local branches that have been removed on the remote (usually after completion of a pull request) .
-	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
-	#   git gone [remote]
-	gone = "!f() { git fetch ${1-origin} -p && for branch in `git branch -vv | grep ': gone]' | awk '{print $1}'`; do git branch -d $branch; done }; f"
-	# Force removes local branches that have been removed on the remote (usually after completion of a pull request).
-	# Note: You should be on a branch that won't have the potential to be deleted, typically the default branch.
-	#   git gonef [remote]
-	gonef = "!f() { git fetch ${1-origin} -p && for branch in `git branch -vv | grep ': gone]' | awk '{print $1}'`; do git branch -D $branch; done }; f"
-	# Switches to the default branch then runs git up and git bclean. Accepts a parameter to use a branch other than the default branch.
-	#   git bdone [source-branch] [remote]
-	bdone = "!f() { defbranch=${1-$(git show-default)} && git checkout $defbranch && git up && git bclean $defbranch && git gone ${2-origin}; }; f"
-	# Creates a feature branch off the default branch. Accepts a parameter to use a branch other than the default.
-	#   git nf <name> [source-branch]
-	nf = "!f() { git checkout ${2-$(git show-default)} && git up && git cob feature/${1}; }; f"
-	# Creates a hotfix branch off the default branch. Accepts a parameter to use a branch other than the default.
-	#   git nh <name> [source-branch]
-	nh = "!f() { git checkout ${2-$(git show-default)} && git up && git cob hotfix/${1}; }; f"
-	# Lists feature branches.
-	brf = !git branch | grep "feature/"
-	# Lists feature branches.
-	brh = !git branch | grep "hotfix/"
-	# Lists all (local and remote) feature branches.
-	braf = !git branch --all | grep "feature/"
-	# Lists all (local and remote) feature branches.
-	brah = !git branch --all | grep "hotfix/"
-	# Fetches latest and rebases current branch with remote default.
-	#   git fr [branch] [remote]
-	fr = !git fetch && git rebase ${2-origin}/${1-$(git show-default)}
-	
 [push]
 	default = simple
 	followTags = true
@@ -210,19 +58,173 @@
 [winUpdater]
 	recentlySeenVersion = 2.23.0.windows.1
 
-[http]
-	proxy = http://127.0.0.1:9000
-	sslVerify = false
-	#sslcainfo = C:/Users/e79209
-
-# Custom configuration includes
-# [include] includes unconditionally. If file doesn't exist, does nothing.
-# [includeIf "gitdir:/path/"] includes if in a repo within "/path/" (note: trailing / is important)
-# [includeIf "gitdir/i:/path/"] includes if in a repo within "/path/" ignoring case (note: trailing / is important)
-
-# Using a machine specific config that's not checked into psprofile to do things like change the user name/email for
-# work
-[include]
-	path = .gitconfig-machine
 [fetch]
 	prune = true
+
+# [includeIf "gitdir/i:C:/r/"]
+# 	path = ~/.gitconfig.work
+
+[includeIf "hasconfig:remote.*.url:https://*/slmbank-vsts/**"]
+	path = ~/.gitconfig.work
+
+# We use a special format for this section which allows "git alias" to
+# display a proper help for our aliases. Alias documentation comments
+# need to start with "#-" and aliases need to be defined with tabs
+# between the alias name and the "=".
+[alias]
+	#- List aliases
+	alias	= "!egrep '\t=|#-' ~/.gitconfig | sed -e 's/#-/#/' -e 's/[\t]*=/ ->/' -e 's/^[ \t]*//'"
+	#- Cherry pick
+	cp		= "cherry-pick"
+	#- Clone
+	cl		= "clone"
+	#- Status
+	st		= "status -sb"
+	#- Branch
+	br		= "branch"
+	#- Gets the "default" branch
+	#-   git brd [remote]
+	brd		= "!git remote show ${1-origin} | grep 'HEAD branch' | cut -d' ' -f5"
+	#- Gets the current branch
+	#-   git brc
+	brc		= "!git rev-parse --abbrev-ref HEAD"
+	#- Checkout
+	co 		= "checkout"
+	#- Checks out the default branch
+	#-   git cod
+	cod		= "!git brd | xargs git co"
+	#- Checkout new branch
+	#-   git cob <name> [additional-checkout-options]
+	cob		= "checkout -b"
+	#- Pulls changes, rebases local committs to come after anything pulled, removes remote-tracking branches that no longer exist.
+	#-   git up [additional-pull-options]
+	up		= "update-branch"
+	#- Creates a feature branch off the default branch. Accepts a parameter to use a branch other than the default.
+	#-   git nf <name> [source-branch]
+	nf		= "new-feature"
+	#- Lists feature branches.
+	brf		= "!git branch | grep 'feature/'"
+	#- Lists all (local and remote) feature branches.
+	braf	= "!git branch --all | grep 'feature/'"
+	#- Creates a hotfix branch off the default branch. Accepts a parameter to use a branch other than the default.
+	#-   git nh <name> [source-branch]
+	nh		= "new-hotfix"
+	#- Lists hotfix branches.
+	brh		= "!git branch | grep 'hotfix/'"
+	#- Lists all (local and remote) hotfix branches.
+	brah	= "!git branch --all | grep 'hotfix/'"
+	#- Commit
+	ci		= "commit"
+	#- Commit all
+	ca		= "!git add -A && git commit"
+	#- Commit all with a comment
+	cm		= "!git add -A && git commit -m"
+	#- Commits with a "WIP" (Work In Progress) message.
+	wip		= "commit -am 'WIP'"
+	#- Commits all work with a SAVEPOINT commit message.
+	save	= "!git add -A && git commit -m 'SAVEPOINT'"
+	#- Reset the previous commit but keep changes in working directory.
+	#- Inverse of save/wip.
+	undo	= "reset HEAD~1 --mixed"
+	#- Ammends previous commit
+	amend	= "commit -a --amend"
+	#- Ammends previous commit with the same commit message
+	amendc	= "commit -a --amend -C HEAD"
+	#- Unstage all.
+	unstage		= "reset HEAD --"
+	#- Merges the current branch with the default
+	md		= "!git brd | xargs git merge"
+	#- Rebases the current branch with the default
+	rd		= "!git brd | xargs git rebase"
+	#- Fetches latest and merges current branch with remote default.
+	#-   git fm [branch] [remote]
+	fm		= "!git fetch && git merge ${2-origin}/${1-$(git brd)}"
+	#- Fetches latest and rebases current branch with remote default.
+	#-   git fr [branch] [remote]
+	fr		= "!git fetch && git rebase ${2-origin}/${1-$(git brd)}"
+	#- Checks out and updates the default branch
+	upd		= "!git cod; git pull"
+	#- Runs the diff tool.
+	dt		= "difftool"
+	#- Runs the merge tool.
+	mt		= "mergetool"
+	#- Continues/completes a merge after conflicts resolved.
+	mc		= "! GIT_EDITOR=true merge --continue"
+	#- Aborts a merge in progress.
+	ma		= "merge --abort"
+	#- Continues/completes a rebase after conflicts resolved.
+	rc      = "! GIT_EDITOR=true rebase --continue"
+	#- Aborts a rebase in progress.
+	ra      = "rebase --abort"
+	#- Publishes the current branch to origin. Accepts a parameter to use
+	#- another remote. Not needed if push is configured to do this by default.
+	publish		= "!f() { git push -u ${1-origin} $(git brc); }; f"
+	#- Unpublishes the current branch (deletes it) from origin. Accepts a parameter
+	#- to use another remote.
+	unpublish	= "!f() { git push ${1-origin} :$(git brc); }; f"
+	#- Assumes a file to be unchanged.
+	assume	= update-index --assume-unchanged
+	#- Unassumes a file
+	unassume	= update-index --no-assume-unchanged
+	#- Show assumed files
+	assumed		= "!git ls-files -v | grep ^h | cut -c 3-"
+	#- Unassume all files
+	unassumeall		= "!git assumed | xargs git update-index --no-assume-unchanged"
+	#- Assume all files
+	assumeall	= "!git st -s | awk {'print $2'} | xargs git assume"	
+	#- Commits everything, then wipes it out. The commit can still be accessed
+	#- using git reflog to find it.
+	wipe	= "!git add -A && git commit -qpm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard"
+	#- Remove modified/added files.
+	wipef	= "clean -fd"
+	#- Return to a pristine checkout with no modified/added files.
+	pristine	= "!git reset --hard; git wipef"
+	#- Move forward
+    fw		= "!git log --pretty=oneline --all | grep -B1 `git rev-parse HEAD` | head -n1 | egrep -o '[a-f0-9]{20,}' | xargs git checkout"
+	#- Move backward
+    bw		= "!git checkout HEAD~1"
+	#- Deletes all branches already merged to the default branch. Accepts a
+	#- parameter to use a branch other than the default branch.
+	#-   git bclean [source-branch]
+	bclean	= "!f() { git branch --merged ${1-$(git brd)} | grep -e 'feature/' -e 'hotfix/' | xargs -r git branch -D; }; f"
+	#- Removes local branches that have been removed on the remote (usually
+	#- after completion of a pull request).
+	#   git gone [remote]
+	gone	= "!f() { git fetch ${1-origin} -p && for branch in `git branch -vv | grep ': gone]' | awk '{print $1}'`; do git branch -d $branch; done }; f"
+	#- Force removes local branches that have been removed on the remote
+	#- (usually after completion of a pull request).
+	#   git gonef [remote]
+	gonef = "!f() { git fetch ${1-origin} -p && for branch in `git branch -vv | grep ': gone]' | awk '{print $1}'`; do git branch -D $branch; done }; f"
+	#- Switches to the default branch then runs git up and then deletes the
+	#- original branch. Accepts a parameter to use a branch other than the
+	#- default branch.
+	#   git done [source-branch] [remote]
+	done = "!f() { defbranch=${2-$(git brd)} && curbranch=${1-$(git show-current)} && git checkout $defbranch && git pull && git branch -D $curbranch; }; f"
+	#- Show last commit
+	last	= log -1 HEAD
+	#- Shows last commit in "long format" (includes files committed)
+	dl		= !git ll -1
+	#- Graphical (ansi-text) log.
+	glog	= log --oneline --abbrev-commit --all --graph
+	#- Show formatted commits in "short" form.
+	ls		= log --pretty=format:'%C(yellow)%h %ad%Cred%d %Creset%s%Cgreen [%cn]%Creset' --decorate --date=relative
+	#- Show formatted commits in "long" form (includes files committed)
+	ll		= log --pretty=format:'%C(yellow)%h%Cred%d %Creset%s%Cgreen [%cn]' --decorate --numstat
+	#- Shows formatted commits with dates.
+	lds		= log --pretty=format:"%C(yellow)%h\\ %ad%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --date=short
+	#- Shows log with diffs
+	fl		= log -u
+	#- Shows commits where a file was added
+	fa		= log --diff-filter=A --summary
+	#- Shows commits where a file was deleted
+	fd		= log --diff-filter=D --summary
+	#- Edits the global config
+	ec		= config --global -e
+	#- Edits the local config
+	elc		= config -e
+	#- Edits the system config
+	esc		= config --system -e
+	#- Lists config file locations
+	ssc      = "!EDITOR=echo git config --system --edit"
+	sgc      = "!EDITOR=echo git config --global --edit"
+	slc      = "!EDITOR=echo git config --local --edit"

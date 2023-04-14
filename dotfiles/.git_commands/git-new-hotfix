@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+#
+# This script creates a new hotfix branch.
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=t
+OPTIONS_KEEPDASHDASH=
+OPTIONS_SPEC="\
+git new-hotfix [-r, --remote <remote>] [-p, --parent <parent>] <name>
+
+Creates a new hotfix branch. The hotfix branch prefix defaults to 'hotfix/'
+but can be set in the 'custom-commands.hotfix.prefix' configuration item.
+--
+r,remote=<remote>   the remote used to determine the parent branch
+p,parent=<parent>   the parent branch to use
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+
+function get-value {
+    IFS='=' read -ra parts <<<"$1"
+    echo ${parts[1]}
+}
+
+remote=
+parent=
+while test $# != 0; do
+    case "$1" in
+    --remote=*) remote=$(get-value "$1") ;;
+    --parent=*) parent=$(get-value "$1") ;;
+    --)
+        shift
+        break
+        ;;
+    esac
+    shift
+done
+
+if [ $# -eq 0 ]; then
+    echo "Missing required branch name argument."
+    echo
+    usage
+    exit 0
+fi
+
+if [ $# -gt 1 ]; then
+    echo "Too many arguments"
+    echo
+    usage
+    exit 1
+fi
+
+if [[ -n $(git status --porcelain) ]]; then
+    die 'Uncommitted changes detected. Commit or stash your changes and try again.'
+fi
+
+branch_prefix=$(git config --get custom-commands.hotfix.prefix)
+branch_prefix=${branch_prefix:-hotfix}
+branch_name="$branch_prefix/$1"
+
+if [ -z "$parent" ]; then
+    remote=${remote:-origin}
+    parent=$(git remote show $remote | grep 'HEAD branch' | cut -d ' ' -f 5)
+fi
+
+git checkout $parent
+git pull
+echo "Pulled from '$remote'."
+git checkout -b "$branch_name"

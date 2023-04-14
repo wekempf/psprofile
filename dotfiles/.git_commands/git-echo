@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#
+# This script simply echos the user input, but illustrates git subcommand best
+# practices, including how to parse command line options.
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=t
+OPTIONS_KEEPDASHDASH=
+OPTIONS_SPEC="\
+git echo [options] <text>
+
+Echos text to the terminal.
+--
+r,reverse!   reverse the text before echoing
+c,color=     echo in the specified color
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+
+# Defaults
+REVERSE=false
+COLOR=unset
+
+function getValue {
+    IFS='=' read -ra parts <<<"$1"
+    echo ${parts[1]}
+}
+
+function getColor {
+    case "$1" in
+    black) echo 0 ;;
+    red) echo 1 ;;
+    green) echo 2 ;;
+    yellow) echo 3 ;;
+    blue) echo 4 ;;
+    magenta) echo 5 ;;
+    cyan) echo 6 ;;
+    white) echo 7 ;;
+    *) die "Unknown color: $1" ;;
+    esac
+}
+
+while test $# != 0; do
+    case "$1" in
+    --reverse) REVERSE=true ;;
+    --color=*) COLOR=$(getColor $(getValue $1)) ;;
+    --)
+        shift
+        break
+        ;;
+    esac
+    shift
+done
+
+if [ $# -eq 0 ]; then
+    echo "Not enough arguments"
+    usage
+    exit 0
+fi
+
+if [ $# -gt 1 ]; then
+    die "Too many arguments"
+fi
+
+text=$1
+if [ "$REVERSE" = true ]; then
+    text=$(echo $text | grep -o . | tac | tr -d '\n')
+fi
+
+# tput, being quiet about unknown capabilities
+tputq() {
+    tput "$@" 2>/dev/null
+    return 0
+}
+
+if [ $COLOR ]; then
+    tput setaf $COLOR
+fi
+
+echo $text
+
+if [ $COLOR ]; then
+    tput sgr0
+fi

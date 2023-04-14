@@ -21,13 +21,13 @@ function Import-RequiredModule {
 }
 
 # Dot source functions
-(Join-Path $PSScriptRoot 'Functions'),(Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
-    Where-Object { Test-Path $_ } |
-    ForEach-Object {
-        Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
-            . $_.FullName
-        }
+(Join-Path $PSScriptRoot 'Functions'), (Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
+Where-Object { Test-Path $_ } |
+ForEach-Object {
+    Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
+        . $_.FullName
     }
+}
 
 # Write banner
 Import-RequiredModule Figlet -AllowClobber
@@ -44,8 +44,13 @@ else {
 }
 
 # If we have a bin folder add it to the path
-if (Test-Path ~\bin) {
-    Add-Path ~\bin
+if (Test-Path ~/bin) {
+    Add-Path ~/bin
+}
+
+# If we have a ~/.git_commands folder at it to the path
+if (Test-Path ~/.git_commands) {
+    Add-Path ~/.git_commands
 }
 
 # Create SymLinks for dotfiles
@@ -55,32 +60,45 @@ foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfil
         if ($IsAdmin) {
             Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
             New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
-        } else {
+        }
+        else {
             Write-Warning "Unable to create symlink for '$destination'. Open an elevated PowerShell to create the symlink."
         }
     }
 }
+foreach ($dotfolder in (Get-ChildItem -Directory -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
+    $destination = Join-Path ~ (Split-Path -Leaf $dotfolder)
+    if (-not (Test-Path $destination -PathType Container)) {
+        if ($IsAdmin) {
+            Write-Host -ForegroundColor Blue "Linking dotfolder '$destination'..."
+            New-Item -Path $destination -ItemType SymbolicLink -Value $dotfolder | Out-Null
+        }
+        else {
+            Write-Warning "Unable to create symlink for folder '$destination'. Open an elevated PowerShell to create the symlink."
+        }
+    }
+}
 
-Import-RequiredModule posh-git,oh-my-posh,Z
+Import-RequiredModule posh-git, oh-my-posh, Z
 
 # Setup oh-my-posh
 oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
 
 # Configure PSReadline
 $PSReadLineOPtions = @{
-    ExtraPromptLineCount = 1
-    HistoryNoDuplicates = $true
+    ExtraPromptLineCount          = 1
+    HistoryNoDuplicates           = $true
     HistorySearchCursorMovesToEnd = $true
-    BellStyle = 'visual'
-    PredictionSource = 'History'
+    BellStyle                     = 'visual'
+    PredictionSource              = 'History'
 }
 Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 Set-PSReadLineKeyHandler -Key 'Alt+9' `
-                         -BriefDescription ParenthesizeSelection `
-                         -LongDescription "Put parenthesis around the selection or entire line and move the cursor to after the closing parenthesis" `
-                         -ScriptBlock {
+    -BriefDescription ParenthesizeSelection `
+    -LongDescription "Put parenthesis around the selection or entire line and move the cursor to after the closing parenthesis" `
+    -ScriptBlock {
     param($key, $arg)
 
     $selectionStart = $null
@@ -90,21 +108,19 @@ Set-PSReadLineKeyHandler -Key 'Alt+9' `
     $line = $null
     $cursor = $null
     [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
-    if ($selectionStart -ne -1)
-    {
+    if ($selectionStart -ne -1) {
         [Microsoft.PowerShell.PSConsoleReadLine]::Replace($selectionStart, $selectionLength, '(' + $line.SubString($selectionStart, $selectionLength) + ')')
         [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($selectionStart + $selectionLength + 2)
     }
-    else
-    {
+    else {
         [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $line.Length, '(' + $line + ')')
         [Microsoft.PowerShell.PSConsoleReadLine]::EndOfLine()
     }
 }
-Set-PSReadlineKeyHandler -Chord "Ctrl+'","Ctrl+Shift+`"" `
-                         -BriefDescription SmartInsertQuote `
-                         -Description "Insert paired quotes if not already on a quote" `
-                         -ScriptBlock {
+Set-PSReadlineKeyHandler -Chord "Ctrl+'", "Ctrl+Shift+`"" `
+    -BriefDescription SmartInsertQuote `
+    -Description "Insert paired quotes if not already on a quote" `
+    -ScriptBlock {
     param($key, $arg)
 
     $line = $null
@@ -116,7 +132,7 @@ Set-PSReadlineKeyHandler -Chord "Ctrl+'","Ctrl+Shift+`"" `
         if ($key.Modifiers -eq 'Control') {
             $keyChar = "`'"
         }
-        elseif ($key.Modifiers -eq 'Shift','Control') {
+        elseif ($key.Modifiers -eq 'Shift', 'Control') {
             $keyChar = '"'
         }
     }
@@ -133,51 +149,49 @@ Set-PSReadlineKeyHandler -Chord "Ctrl+'","Ctrl+Shift+`"" `
     }
 }
 Set-PSReadlineKeyHandler -Chord Alt+c `
-                         -BriefDescription CopyCurrentPathToClipboard `
-                         -LongDescription "Copy the current path to the clipboard" `
-                         -ScriptBlock {
+    -BriefDescription CopyCurrentPathToClipboard `
+    -LongDescription "Copy the current path to the clipboard" `
+    -ScriptBlock {
     param($key, $arg)
 
     Set-Clipboard $pwd.Path
 }
 Set-PSReadlineKeyHandler -Chord Alt+v `
-                         -BriefDescription PasteAsHereString `
-                         -LongDescription "Paste the clipboard text as a here string" `
-                         -ScriptBlock {
+    -BriefDescription PasteAsHereString `
+    -LongDescription "Paste the clipboard text as a here string" `
+    -ScriptBlock {
     param($key, $arg)
 
     $clipboardText = Get-Clipboard
     if ($clipboardText) {
         # Remove trailing spaces, convert \r\n to \n, and remove the final \n.
-        $text =  $clipboardText.TrimEnd() -join "`n"
+        $text = $clipboardText.TrimEnd() -join "`n"
         [Microsoft.PowerShell.PSConsoleReadLine]::Insert("@'`n$text`n'@")
     }
-    else
-    {
+    else {
         [Microsoft.PowerShell.PSConsoleReadLine]::Ding()
     }
 }
 Set-PSReadlineKeyHandler -Chord Alt+v `
-                         -BriefDescription PasteAsHereString `
-                         -LongDescription "Paste the clipboard text as a here string" `
-                         -ScriptBlock {
+    -BriefDescription PasteAsHereString `
+    -LongDescription "Paste the clipboard text as a here string" `
+    -ScriptBlock {
     param($key, $arg)
 
     $clipboardText = Get-Clipboard
     if ($clipboardText) {
         # Remove trailing spaces, convert \r\n to \n, and remove the final \n.
-        $text =  $clipboardText.TrimEnd() -join "`n"
+        $text = $clipboardText.TrimEnd() -join "`n"
         [Microsoft.PowerShell.PSConsoleReadLine]::Insert("@'`n$text`n'@")
     }
-    else
-    {
+    else {
         [Microsoft.PowerShell.PSConsoleReadLine]::Ding()
     }
 }
 Set-PSReadlineKeyHandler -Chord Alt+r `
-                         -BriefDescription ResolveAliases `
-                         -LongDescription "Replace all aliases with the full command" `
-                         -ScriptBlock {
+    -BriefDescription ResolveAliases `
+    -LongDescription "Replace all aliases with the full command" `
+    -ScriptBlock {
     param($key, $arg)
 
     $ast = $null
@@ -187,16 +201,12 @@ Set-PSReadlineKeyHandler -Chord Alt+r `
     [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$ast, [ref]$tokens, [ref]$errors, [ref]$cursor)
 
     $startAdjustment = 0
-    foreach ($token in $tokens)
-    {
-        if ($token.TokenFlags -band [System.Management.Automation.Language.TokenFlags]::CommandName)
-        {
+    foreach ($token in $tokens) {
+        if ($token.TokenFlags -band [System.Management.Automation.Language.TokenFlags]::CommandName) {
             $alias = $ExecutionContext.InvokeCommand.GetCommand($token.Extent.Text, 'Alias')
-            if ($alias -ne $null)
-            {
+            if ($alias -ne $null) {
                 $resolvedCommand = $alias.ResolvedCommandName
-                if ($resolvedCommand -ne $null)
-                {
+                if ($resolvedCommand -ne $null) {
                     $extent = $token.Extent
                     $length = $extent.EndOffset - $extent.StartOffset
                     [Microsoft.PowerShell.PSConsoleReadLine]::Replace(
@@ -218,11 +228,12 @@ if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'dotnet'..."
     Register-ArgumentCompleter -Native -CommandName dotnet -ScriptBlock {
         param($commandName, $wordToComplete, $cursorPosition)
-            dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
-                [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-            }
+        dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
     }
-} else {
+}
+else {
     Write-Information "Command 'dotnet' not found."
 }
 
@@ -231,13 +242,14 @@ if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'nuke'..."
     Register-ArgumentCompleter -Native -CommandName nuke -ScriptBlock {
         param($commandName, $wordToComplete, $cursorPosition)
-            nuke :complete "$wordToComplete" | ForEach-Object {
-                if (-not $_.StartsWith('NUKE Global Tool')) {
-                    [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-                }
+        nuke :complete "$wordToComplete" | ForEach-Object {
+            if (-not $_.StartsWith('NUKE Global Tool')) {
+                [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
             }
+        }
     }
-} else {
+}
+else {
     Write-Information "Command 'nuke' not found."
 }
 
@@ -246,8 +258,8 @@ if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
 
 # Invoke machine specific profile
 @(Join-Path $PSScriptRoot "machine\${env:COMPUTERNAME}\$($MyInvocation.MyCommand.Name)") |
-    Where-Object { Test-Path $_ } |
-    ForEach-Object { . $_ }
+Where-Object { Test-Path $_ } |
+ForEach-Object { . $_ }
 
 # Display notice if there's profile changes
 Push-Location $ProfileDir
