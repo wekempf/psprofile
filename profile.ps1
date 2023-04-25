@@ -84,6 +84,9 @@ Import-RequiredModule posh-git, oh-my-posh, Z
 # Setup oh-my-posh
 oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
 
+# Setup our DynamicTitle
+. (Join-Path $PSScriptRoot DynamicTitle.ps1)
+
 # Configure PSReadline
 $PSReadLineOPtions = @{
     ExtraPromptLineCount          = 1
