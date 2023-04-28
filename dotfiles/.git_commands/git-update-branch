@@ -8,11 +8,13 @@
 OPTIONS_STUCKLONG=t
 OPTIONS_KEEPDASHDASH=
 OPTIONS_SPEC="\
-git update-branch [<remote>] [<branch>]
+git update-branch [<branch>]
 
 Fetches changes then rebases the upstream branch onto the current branch.
+The <branch> can be provided in <remote>/<branch> form. If it's not the
+<remote> is implied to be the value from 'git remote show'. If no branch is
+given it's implied to be the default branch of the implied remote.
 --
-<remote>  the remote to fetch from
 <branch>  the branch to rebase from
 "
 
@@ -28,8 +30,6 @@ while test $# != 0; do
     shift
 done
 
-. util-parent-branch
-
 test $# -gt 2 && die "Too many arguments"
 
 if [[ -n $(git status --porcelain) ]]; then
@@ -37,23 +37,14 @@ if [[ -n $(git status --porcelain) ]]; then
 fi
 
 if [ -z "$1" ]; then
-    parent="$(parent-branch)"
-    [ -z "$parent" ] && die "Unable to determine parent branch"
-    remote="$(git rev-parse --abbrev-ref --symbolic-full-name "$parent@{u}")"
+    remote=$(git remote show)
+    branch="$remote/$(git remote show $remote | grep 'HEAD branch' | cut -d' ' -f5)"
+elif [ "$1" != *"/"* ]; then
+    remote=$(git remote show)
+    branch="$remote/$1"
 else
-    remote="$1"
-fi
-
-if [ $(echo "$remote" | grep '.*/.*') ]; then
-    branch=$(echo "$remote" | cut -d '/' -f 2)
-    remote=$(echo "$remote" | cut -d '/' -f 1)
-fi
-
-branch=${2:-$branch}
-if [ -z "$branch" ]; then
-    branch=$remote
-    remote="$(git rev-parse --abbrev-ref --symbolic-full-name "$parent@{u}")"
-    remote=$(echo "$remote" | cut -d '/' -f 1)
+    remote=$(echo "$1" | cut -d '/' -f 1)
+    branch=$(echo "$1" | cut -d '/' -f 2)
 fi
 
 git branch -r | grep -qn ${remote}/${branch}$ || die "Branch '$remote/$branch' does not exist"
@@ -61,7 +52,7 @@ git branch -r | grep -qn ${remote}/${branch}$ || die "Branch '$remote/$branch' d
 git fetch $remote
 echo "Fetched from '$remote'."
 
-git rebase $remote/$branch
+git rebase "$remote/$branch"
 
 if [ -f "$(git rev-parse --git-dir)/REBASE_HEAD" ]; then
     echo "Rebasing from '$remote/$branch' in progress."

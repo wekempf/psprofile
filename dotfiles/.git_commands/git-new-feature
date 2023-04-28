@@ -7,12 +7,13 @@
 OPTIONS_STUCKLONG=t
 OPTIONS_KEEPDASHDASH=
 OPTIONS_SPEC="\
-git new-feature [-r, --remote <remote>] [-p, --parent <parent>] <name>
+git new-feature [options] <name>
 
 Creates a new feature branch. The feature branch prefix defaults to 'feature/'
-but can be set in the 'custom-commands.feature.prefix' configuration item.
+but can be set in the 'new-branch.feature.prefix' configuration item.
+
+If '--parent' isn't specified the remote's default branch is implied.
 --
-r,remote=<remote>   the remote used to determine the parent branch
 p,parent=<parent>   the parent branch to use
 "
 
@@ -23,11 +24,9 @@ function get-value {
     echo ${parts[1]}
 }
 
-remote=
 parent=
 while test $# != 0; do
     case "$1" in
-    --remote=*) remote=$(get-value "$1") ;;
     --parent=*) parent=$(get-value "$1") ;;
     --)
         shift
@@ -37,34 +36,15 @@ while test $# != 0; do
     shift
 done
 
-if [ $# -eq 0 ]; then
-    echo "Missing required branch name argument."
-    echo
-    usage
-    exit 0
-fi
-
-if [ $# -gt 1 ]; then
-    echo "Too many arguments"
-    echo
-    usage
-    exit 1
-fi
-
 if [[ -n $(git status --porcelain) ]]; then
     die 'Uncommitted changes detected. Commit or stash your changes and try again.'
 fi
 
-branch_prefix=$(git config --get custom-commands.feature.prefix)
+branch_prefix=$(git config --get new-branch.feature.prefix)
 branch_prefix=${branch_prefix:-feature}
-branch_name="$branch_prefix/$1"
 
-if [ -z "$parent" ]; then
-    remote=${remote:-origin}
-    parent=$(git remote show $remote | grep 'HEAD branch' | cut -d ' ' -f 5)
+args=("$branch_prefix/$1")
+if [ -n "$parent" ]; then
+    args+=("--parent" "$parent")
 fi
-
-git checkout $parent
-git pull
-echo "Pulled from '$remote'."
-git checkout -b "$branch_name"
+git new-branch ${args[*]}

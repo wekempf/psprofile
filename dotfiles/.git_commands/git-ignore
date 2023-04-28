@@ -2,64 +2,33 @@
 #
 # This script creates and updates a .gitignore file.
 #
+# NOTE: you may need to add --proxy, --cacert and --cert-type
+# (or other) options to ~/.curlrc.
+#
 
 # Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
 OPTIONS_STUCKLONG=t
 OPTIONS_KEEPDASHDASH=
 OPTIONS_SPEC="\
-git ignore [options] <templates-patterns-or-search>...
+git ignore [options] <template-pattern-or-search-term>...
 
 Creates or updated a .gitignore file.
 --
-r,replace replace .gitignore file
 l,list list available templates
 s,search search in available templates
-u,update-list update list of templates (automatically done every 3 days)
+u,update-list update list of templates (used with -l or -s, automatic every 3 days)
 p,pattern add pattern(s) to .gitignore file
-c,current-dir use the current directory .gitignore file (defaults to root file)
+r,replace replace .gitignore file (ignored for -l or -s)
+c,current-dir use .gitignore in current directory instead of root (ignored for -l or -s)
 "
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
 
-replace=false
-list=false
-search=false
-update=false
-pattern=false
-ignorefile="$(git rev-parse --show-toplevel)/.gitignore"
-while test $# != 0; do
-    case "$1" in
-    --replace) replace=true ;;
-    --list) list=true ;;
-    --search) search=true ;;
-    --update-list) update=true ;;
-    --pattern) pattern=true ;;
-    --current-dir) ignorefile="./.gitignore" ;;
-    --)
-        shift
-        break
-        ;;
-    esac
-    shift
-done
-
-proxy=$(git config --get gitignore.proxy)
-cacert=$(git config --get gitignore.cacert)
-certtype=$(git config --get gitignore.cert-type)
-
-args=("-sL")
-if [ -n $proxy ]; then
-    args+=("--proxy" "$proxy")
-fi
-if [ -n $cacert ]; then
-    args+=("--cacert" "$cacert")
-fi
-if [ -n $certtype ]; then
-    args+=("--cert-type" "$certtype")
-fi
-
-ignoreio='https://www.toptal.com/developers/gitignore/api'
-gipath="$HOME/.gilist"
+die_with_usage() {
+    printf >&2 '%s\n\n' "$*"
+    usage
+    exit 1
+}
 
 file_age() {
     echo $(($(date +%s) - $(date -r $1 +%s)))
@@ -77,6 +46,43 @@ join() {
     IFS=$oldifs
 }
 
+replace=false
+list=false
+search=false
+update=false
+pattern=false
+ignorefile="$(git rev-parse --show-toplevel)/.gitignore"
+while test $# != 0; do
+    case "$1" in
+    --replace) replace=true ;;
+    --list)
+        if $search; then die_with_usage "--list and --search cannot be used together"; fi
+        if $pattern; then die_with_usage "--list and --pattern cannot be used together"; fi
+        list=true
+        ;;
+    --search)
+        if $list; then die_with_usage "--list and --search cannot be used together"; fi
+        if $pattern; then die_with_usage "--search and --pattern cannot be used together"; fi
+        search=true
+        ;;
+    --update-list) update=true ;;
+    --pattern)
+        if $list; then die_with_usage "--list and --pattern cannot be used together"; fi
+        if $search; then die_with_usage "--search and --pattern cannot be used together"; fi
+        pattern=true
+        ;;
+    --current-dir) ignorefile="./.gitignore" ;;
+    --)
+        shift
+        break
+        ;;
+    esac
+    shift
+done
+
+ignoreio='https://www.toptal.com/developers/gitignore/api'
+gipath="$HOME/.gilist"
+
 if ($list || $search); then
     if ! $update; then
         if is_stale $gipath; then
@@ -85,7 +91,7 @@ if ($list || $search); then
     fi
 
     if $update; then
-        curl ${args[@]} "$ignoreio/list" >"$gipath"
+        curl -sL "$ignoreio/list" >"$gipath"
     fi
 
     gilist=$(tr "," "\n" <"$gipath" 2>/dev/null)
@@ -93,7 +99,7 @@ if ($list || $search); then
         echo "$gilist" | column
     else
         if [ "$#" -eq 0 ]; then
-            die "No search terms provided"
+            die_with_usage "No search terms provided"
         fi
         found=""
         for type in $gilist; do
@@ -112,7 +118,7 @@ if ($list || $search); then
     fi
 elif $pattern; then
     if [ "$#" -eq 0 ]; then
-        die "No patterns provided."
+        die_with_usage "No patterns provided."
     fi
     first=$replace
     for p in $@; do
@@ -125,9 +131,9 @@ elif $pattern; then
     done
 else
     if [ "$#" -eq 0 ]; then
-        die "No templates provided."
+        die_with_usage "No templates provided."
     fi
-    template=$(curl ${args[@]} "$ignoreio/$(join ',' $@)")
+    template=$(curl -sL "$ignoreio/$(join ',' $@)")
     if $replace; then
         echo "$template" >"$ignorefile"
     else
