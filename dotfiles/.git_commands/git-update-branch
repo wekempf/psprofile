@@ -38,24 +38,20 @@ fi
 
 if [ -z "$1" ]; then
     remote=$(git remote show)
-    branch="$remote/$(git remote show $remote | grep 'HEAD branch' | cut -d' ' -f5)"
-elif [ "$1" != *"/"* ]; then
-    remote=$(git remote show)
-    branch="$remote/$1"
-else
-    remote=$(echo "$1" | cut -d '/' -f 1)
-    branch=$(echo "$1" | cut -d '/' -f 2)
+    branch="$(git remote show $remote | grep 'HEAD branch' | cut -d' ' -f5)"
 fi
 
-git branch -r | grep -qn ${remote}/${branch}$ || die "Branch '$remote/$branch' does not exist"
+git branch -r | grep -qn ${branch} || die "Branch '$branch' does not exist"
+curbranch=$(git rev-parse --abbrev-ref HEAD)
+[ "$branch" != "$curbranch" ] || die "Cannot update $branch"
 
-git fetch $remote
-echo "Fetched from '$remote'."
-
-git rebase "$remote/$branch"
+git checkout "$branch"
+git pull
+git checkout "$curbranch"
+git rebase "$branch"
 
 if [ -f "$(git rev-parse --git-dir)/REBASE_HEAD" ]; then
-    echo "Rebasing from '$remote/$branch' in progress."
+    echo "Rebasing from '$branch' in progress."
 else
-    echo "Rebased from '$remote/$branch'."
+    echo "Rebased from '$branch'."
 fi

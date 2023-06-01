@@ -35,7 +35,6 @@
 	remote = bold red
   
 [core]
-	#autocrlf = true
 	editor = \"C:\\Users\\e79209\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code\" --wait
 	excludesfile = ~/.gitignore
 	symlinks = false
@@ -45,8 +44,8 @@
 [push]
 	default = simple
 	followTags = true
-
 	autoSetupRemote = true
+	
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f

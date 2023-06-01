@@ -7,13 +7,11 @@
 OPTIONS_STUCKLONG=t
 OPTIONS_KEEPDASHDASH=
 OPTIONS_SPEC="\
-git new-hotfix [options] <name>
+git new-branch [options] <name>
 
 Creates a new branch.
 
-The <parent> can be provided in <remote>/<branch> form. If it's not the
-<remote> is implied to be the value from 'git remote show'. If no branch is
-given it's implied to be the default branch of the implied remote.
+If '--parent' isn't specified the remote's default branch is implied.
 --
 p,parent=<parent> the parent branch to use
 "
