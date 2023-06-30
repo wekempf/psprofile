@@ -117,6 +117,7 @@ if ($list || $search); then
         echo -e "$found" | column
     fi
 elif $pattern; then
+    gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
     if [ "$#" -eq 0 ]; then
         die_with_usage "No patterns provided."
     fi
@@ -130,6 +131,7 @@ elif $pattern; then
         first=false
     done
 else
+    gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
     if [ "$#" -eq 0 ]; then
         die_with_usage "No templates provided."
     fi

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# This script creates fixup commits. If no commit is specified as the commit
+# to fixup then a list of the commits for the current branch are displayed
+# and the user is prompted for the commit to fixup.
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=t
+OPTIONS_KEEPDASHDASH=
+LONG_USAGE="\
+Commit staged items as a '!fixup' commit for the specified commit. If the commit
+is not specified a picklist is presented to select the commit from commits in
+the current branch. This picklist is done with the command specified in the
+GIT_FIX_SELECTOR environment variable. If that environment variable is unset
+and fzf is available on the system then fzf is used; otherwise a simple
+picklist using select is used.
+"
+OPTIONS_SPEC="\
+git fixup [<commit>]
+--
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+
+while test $# != 0; do
+    case "$1" in
+    --)
+        shift
+        break
+        ;;
+    esac
+    shift
+done
+
+test $# -gt 2 && die "Too many arguments"
+gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
+
+default_branch=$(git default-branch)
+
+function simplesel() {
+    readarray -t commits
+    select commit in "${commits[@]}"; do
+        echo "$commit"
+        break
+    done </dev/tty
+}
+
+selector="$GIT_FIX_SELECTOR"
+if [ -z "$selector" ]; then
+    if command -v fzf &>/dev/null; then
+        selector='fzf'
+    else
+        selector='simplesel'
+    fi
+fi
+
+if ! [ $# -eq 0 ]; then
+    sha="$1"
+else
+    sha=$(git --no-pager log $default_branch.. --pretty=format:"%h %s" |
+        "$selector" |
+        awk '{print $1}')
+fi
+git commit --fixup "$sha"

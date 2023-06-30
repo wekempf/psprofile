@@ -36,8 +36,8 @@ if [[ -n $(git status --porcelain) ]]; then
     die 'Uncommitted changes detected. Commit or stash your changes and try again.'
 fi
 
+remote=$(git remote show)
 if [ -z "$1" ]; then
-    remote=$(git remote show)
     branch="$(git remote show $remote | grep 'HEAD branch' | cut -d' ' -f5)"
 fi
 
@@ -45,9 +45,7 @@ git branch -r | grep -qn ${branch} || die "Branch '$branch' does not exist"
 curbranch=$(git rev-parse --abbrev-ref HEAD)
 [ "$branch" != "$curbranch" ] || die "Cannot update $branch"
 
-git checkout "$branch"
-git pull
-git checkout "$curbranch"
+git fetch "$remote" "$branch:$branch"
 git rebase "$branch"
 
 if [ -f "$(git rev-parse --git-dir)/REBASE_HEAD" ]; then

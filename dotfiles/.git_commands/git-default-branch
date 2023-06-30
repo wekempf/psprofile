@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# This script outputs the "default" branch of the repo.
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=t
+OPTIONS_KEEPDASHDASH=
+OPTIONS_SPEC="\
+git default-branch [<remote>]
+--
+<remote>  the remote to get the default branch of; defaults to the result of 'git remote show'
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+
+while test $# != 0; do
+    case "$1" in
+    --)
+        shift
+        break
+        ;;
+    esac
+    shift
+done
+
+test $# -gt 2 && die "Too many arguments"
+
+if [ $# -eq 1 ]; then
+    remote=$1
+else
+    remote=$(git remote show)
+fi
+
+git symbolic-ref -q "refs/remotes/$remote/HEAD" | sed 's@^refs/remotes/origin/@@'
