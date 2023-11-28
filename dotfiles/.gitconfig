@@ -35,7 +35,7 @@
 	remote = bold red
   
 [core]
-	editor = \"C:\\Users\\e79209\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code\" --wait
+	editor = \"code\" --wait
 	excludesfile = ~/.gitignore
 	symlinks = false
 	autocrlf = true

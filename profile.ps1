@@ -1,7 +1,7 @@
 # Detect elevation
 $IsAdmin = & {
     $wid = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-    $prp = new-object System.Security.Principal.WindowsPrincipal($wid)
+    $prp = New-Object System.Security.Principal.WindowsPrincipal($wid)
     $adm = [System.Security.Principal.WindowsBuiltInRole]::Administrator
     $prp.IsInRole($adm)
 }
@@ -22,12 +22,12 @@ function Import-RequiredModule {
 
 # Dot source functions
 (Join-Path $PSScriptRoot 'Functions'), (Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
-Where-Object { Test-Path $_ } |
-ForEach-Object {
-    Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
-        . $_.FullName
+    Where-Object { Test-Path $_ } |
+    ForEach-Object {
+        Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
+            . $_.FullName
+        }
     }
-}
 
 # Write banner
 Import-RequiredModule Figlet -AllowClobber
@@ -40,12 +40,17 @@ if (Get-Command -Name code -ErrorAction SilentlyContinue) {
     $env:Editor = 'code'
 }
 else {
-    $env:Editor = "notepad"
+    $env:Editor = 'notepad'
 }
 
 # If we have a bin folder add it to the path
 if (Test-Path ~/bin) {
     Add-Path ~/bin
+}
+
+# If we have a scripts folder add it to the path
+if (Test-Path $PSScriptRoot/scripts) {
+    Add-Path $PSScriptRoot/scripts
 }
 
 # If we have a ~/.git_commands folder at it to the path
@@ -79,28 +84,36 @@ foreach ($dotfolder in (Get-ChildItem -Directory -Path (Join-Path $PSScriptRoot 
     }
 }
 
-Import-RequiredModule posh-git, oh-my-posh, Z
+Import-RequiredModule posh-git, Z
 
 # Setup oh-my-posh
-oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
+#oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
+#oh-my-posh init pwsh --config (Join-Path $PSScriptRoot PoshThemes/wek.json) | Invoke-Expression
+Use-PromptTheme wek
 
 # Setup our DynamicTitle
 . (Join-Path $PSScriptRoot DynamicTitle.ps1)
 
+if (Get-Command fzf -ErrorAction SilentlyContinue) {
+    # Setup fzf
+    Import-RequiredModule PSFzf
+    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+}
+
 # Configure PSReadline
 $PSReadLineOPtions = @{
-    ExtraPromptLineCount          = 1
-    HistoryNoDuplicates           = $true
+    ExtraPromptLineCount = 1
+    HistoryNoDuplicates = $true
     HistorySearchCursorMovesToEnd = $true
-    BellStyle                     = 'visual'
-    PredictionSource              = 'History'
+    BellStyle = 'visual'
+    PredictionSource = 'History'
 }
 Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 Set-PSReadLineKeyHandler -Key 'Alt+9' `
     -BriefDescription ParenthesizeSelection `
-    -LongDescription "Put parenthesis around the selection or entire line and move the cursor to after the closing parenthesis" `
+    -LongDescription 'Put parenthesis around the selection or entire line and move the cursor to after the closing parenthesis' `
     -ScriptBlock {
     param($key, $arg)
 
@@ -120,9 +133,9 @@ Set-PSReadLineKeyHandler -Key 'Alt+9' `
         [Microsoft.PowerShell.PSConsoleReadLine]::EndOfLine()
     }
 }
-Set-PSReadlineKeyHandler -Chord "Ctrl+'", "Ctrl+Shift+`"" `
+Set-PSReadLineKeyHandler -Chord "Ctrl+'", "Ctrl+Shift+`"" `
     -BriefDescription SmartInsertQuote `
-    -Description "Insert paired quotes if not already on a quote" `
+    -Description 'Insert paired quotes if not already on a quote' `
     -ScriptBlock {
     param($key, $arg)
 
@@ -151,17 +164,17 @@ Set-PSReadlineKeyHandler -Chord "Ctrl+'", "Ctrl+Shift+`"" `
         [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($cursor - 1)
     }
 }
-Set-PSReadlineKeyHandler -Chord Alt+c `
+Set-PSReadLineKeyHandler -Chord Alt+c `
     -BriefDescription CopyCurrentPathToClipboard `
-    -LongDescription "Copy the current path to the clipboard" `
+    -LongDescription 'Copy the current path to the clipboard' `
     -ScriptBlock {
     param($key, $arg)
 
     Set-Clipboard $pwd.Path
 }
-Set-PSReadlineKeyHandler -Chord Alt+v `
+Set-PSReadLineKeyHandler -Chord Alt+v `
     -BriefDescription PasteAsHereString `
-    -LongDescription "Paste the clipboard text as a here string" `
+    -LongDescription 'Paste the clipboard text as a here string' `
     -ScriptBlock {
     param($key, $arg)
 
@@ -175,9 +188,9 @@ Set-PSReadlineKeyHandler -Chord Alt+v `
         [Microsoft.PowerShell.PSConsoleReadLine]::Ding()
     }
 }
-Set-PSReadlineKeyHandler -Chord Alt+v `
+Set-PSReadLineKeyHandler -Chord Alt+v `
     -BriefDescription PasteAsHereString `
-    -LongDescription "Paste the clipboard text as a here string" `
+    -LongDescription 'Paste the clipboard text as a here string' `
     -ScriptBlock {
     param($key, $arg)
 
@@ -191,9 +204,9 @@ Set-PSReadlineKeyHandler -Chord Alt+v `
         [Microsoft.PowerShell.PSConsoleReadLine]::Ding()
     }
 }
-Set-PSReadlineKeyHandler -Chord Alt+r `
+Set-PSReadLineKeyHandler -Chord Alt+r `
     -BriefDescription ResolveAliases `
-    -LongDescription "Replace all aliases with the full command" `
+    -LongDescription 'Replace all aliases with the full command' `
     -ScriptBlock {
     param($key, $arg)
 
@@ -261,23 +274,23 @@ else {
 
 # Invoke machine specific profile
 @(Join-Path $PSScriptRoot "machine\${env:COMPUTERNAME}\$($MyInvocation.MyCommand.Name)") |
-Where-Object { Test-Path $_ } |
-ForEach-Object { . $_ }
+    Where-Object { Test-Path $_ } |
+    ForEach-Object { . $_ }
 
 # Display notice if there's profile changes
 Push-Location $ProfileDir
 try {
     if (Get-Command -Name git -ErrorAction SilentlyContinue) {
         if (-not (git status | Select-String 'nothing to commit')) {
-            Write-Warning "Profile changes need to be committed and pushed"
+            Write-Warning 'Profile changes need to be committed and pushed'
         }
         else {
             git fetch
             if ((git rev-list --count origin..HEAD) -gt 0) {
-                Write-Warning "Local profile changes need to be pushed"
+                Write-Warning 'Local profile changes need to be pushed'
             }
             elseif ((git rev-list --count HEAD..origin) -gt 0) {
-                Write-Warning "Remote profile changes need to be merged"
+                Write-Warning 'Remote profile changes need to be merged'
             }
         }
     }
