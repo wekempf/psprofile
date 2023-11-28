@@ -54,6 +54,7 @@
 [rebase]
 	autosquash = true
 
+	autostash = true
 [winUpdater]
 	recentlySeenVersion = 2.23.0.windows.1
 
