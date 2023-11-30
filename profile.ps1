@@ -79,13 +79,15 @@ foreach ($dotfolder in (Get-ChildItem -Directory -Path (Join-Path $PSScriptRoot 
     }
 }
 
-Import-RequiredModule posh-git, oh-my-posh, Z
+Import-RequiredModule posh-git
 
 # Setup oh-my-posh
-oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
+#oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
+#oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/pure.omp.json" | Invoke-Expression
+oh-my-posh init pwsh --config ~/wekpure.omp.json | Invoke-Expression
 
 # Setup our DynamicTitle
-. (Join-Path $PSScriptRoot DynamicTitle.ps1)
+#. (Join-Path $PSScriptRoot DynamicTitle.ps1)
 
 # Configure PSReadline
 $PSReadLineOPtions = @{

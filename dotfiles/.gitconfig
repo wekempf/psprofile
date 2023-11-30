@@ -206,6 +206,8 @@
 	dl		= !git ll -1
 	#- Graphical (ansi-text) log.
 	glog	= log --oneline --abbrev-commit --all --graph
+	#- Branch log.
+	blog    = "!f() { git log $(git brd).. --oneline; }; f"
 	#- Show formatted commits in "short" form.
 	ls		= log --pretty=format:'%C(yellow)%h %ad%Cred%d %Creset%s%Cgreen [%cn]%Creset' --decorate --date=relative
 	#- Show formatted commits in "long" form (includes files committed)

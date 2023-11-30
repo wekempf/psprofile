@@ -49,6 +49,8 @@ if [ $# -gt 1 ]; then
     die_with_usage "Too many arguments."
 fi
 
+gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
+
 if [[ -n $(git status --porcelain) ]]; then
     die 'Uncommitted changes detected. Commit or stash your changes and try again.'
 fi
