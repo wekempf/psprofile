@@ -1,9 +1,14 @@
 # Detect elevation
 $IsAdmin = & {
-    $wid = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-    $prp = New-Object System.Security.Principal.WindowsPrincipal($wid)
-    $adm = [System.Security.Principal.WindowsBuiltInRole]::Administrator
-    $prp.IsInRole($adm)
+    if ($IsWindows) {
+        $wid = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        $prp = New-Object System.Security.Principal.WindowsPrincipal($wid)
+        $adm = [System.Security.Principal.WindowsBuiltInRole]::Administrator
+        $prp.IsInRole($adm)
+    }
+    elseif ($IsLinux) {
+        (id) -like 'uid=0*'
+    }
 }
 
 function Import-RequiredModule {
@@ -31,16 +36,29 @@ ForEach-Object {
 
 # Write banner
 Import-RequiredModule Figlet -AllowClobber
-Write-Figlet $env:COMPUTERNAME -Font big -Foreground ($IsAdmin ? 'Red' : 'Blue')
+if ($IsWindows) {
+    $script:ComputerName = $env:COMPUTERNAME
+}
+elseif ($IsLinux) {
+    if (Get-Command hostname -ErrorAction SilentlyContinue) {
+        $script:ComputerName = (hostname)
+    }
+    else {
+        $script:ComputerName = Get-Content /etc/hostname
+    }
+}
+Write-Figlet $script:ComputerName -Font big -Foreground ($IsAdmin ? 'Red' : 'Blue')
 
 # Configure environment variables
 Set-Variable -Name ProfileDir -Value (Split-Path $profile)
 Set-Variable -Name ModuleDir -Value (Join-Path $ProfileDir 'Modules')
 if (Get-Command -Name code -ErrorAction SilentlyContinue) {
-    $env:Editor = 'code'
+    $env:EDITOR = 'code'
 }
 else {
-    $env:Editor = 'notepad'
+    if ($IsWindows) {
+        $env:EDITOR = 'notepad'
+    }
 }
 
 # If we have a bin folder add it to the path
@@ -59,37 +77,41 @@ if (Test-Path ~/.git_commands) {
 }
 
 # Create SymLinks for dotfiles
-foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
-    $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
-    if (-not (Test-Path $destination -PathType Leaf)) {
-        if ($IsAdmin) {
-            Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
-            New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
-        }
-        else {
-            Write-Warning "Unable to create symlink for '$destination'. Open an elevated PowerShell to create the symlink."
+if ($IsWindows) {
+    foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
+        $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
+        if (-not (Test-Path $destination -PathType Leaf)) {
+            if ($IsAdmin) {
+                Write-Host -ForegroundColor Blue "Linking dotfile '$destination'..."
+                New-Item -Path $destination -ItemType SymbolicLink -Value $dotfile | Out-Null
+            }
+            else {
+                Write-Warning "Unable to create symlink for '$destination'. Open an elevated PowerShell to create the symlink."
+            }
         }
     }
-}
-foreach ($dotfolder in (Get-ChildItem -Directory -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
-    $destination = Join-Path ~ (Split-Path -Leaf $dotfolder)
-    if (-not (Test-Path $destination -PathType Container)) {
-        if ($IsAdmin) {
-            Write-Host -ForegroundColor Blue "Linking dotfolder '$destination'..."
-            New-Item -Path $destination -ItemType SymbolicLink -Value $dotfolder | Out-Null
-        }
-        else {
-            Write-Warning "Unable to create symlink for folder '$destination'. Open an elevated PowerShell to create the symlink."
+    foreach ($dotfolder in (Get-ChildItem -Directory -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
+        $destination = Join-Path ~ (Split-Path -Leaf $dotfolder)
+        if (-not (Test-Path $destination -PathType Container)) {
+            if ($IsAdmin) {
+                Write-Host -ForegroundColor Blue "Linking dotfolder '$destination'..."
+                New-Item -Path $destination -ItemType SymbolicLink -Value $dotfolder | Out-Null
+            }
+            else {
+                Write-Warning "Unable to create symlink for folder '$destination'. Open an elevated PowerShell to create the symlink."
+            }
         }
     }
 }
 
 Import-RequiredModule posh-git
 
-# Setup oh-my-posh
-#oh-my-posh --init --shell pwsh --config ~/wekempf.omp.json | Invoke-Expression
-#oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/pure.omp.json" | Invoke-Expression
-oh-my-posh init pwsh --config ~/wekpure.omp.json | Invoke-Expression
+if (Get-Module PowerLocation -ListAvailable) {
+    Import-Module PowerLocation
+    Set-Alias -Name z -Value Set-PowerLocation
+}
+
+. $PSScriptRoot/customprompt.ps1
 
 # Setup our DynamicTitle
 #. (Join-Path $PSScriptRoot DynamicTitle.ps1)
@@ -139,6 +161,13 @@ else {
 @(Join-Path $PSScriptRoot "machine\${env:COMPUTERNAME}\$($MyInvocation.MyCommand.Name)") |
 Where-Object { Test-Path $_ } |
 ForEach-Object { . $_ }
+
+# Set an alias for invoking build.ps1 scripts in the current location
+Set-Alias -Name b -Value './build.ps1'
+
+if ($IsLinux) {
+    Set-Alias -Name ls -Value Get-ChildItem
+}
 
 # Display notice if there's profile changes
 Push-Location $ProfileDir

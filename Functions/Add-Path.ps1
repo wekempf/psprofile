@@ -4,10 +4,10 @@ function Add-Path {
         [Parameter(Position = 0, Mandatory = $True)]
         [string[]]$Path,
 
-        [Parameter(Mandatory = $False, ParameterSetName='name')]
-        [string]$Name = 'env:Path',
+        [Parameter(Mandatory = $False, ParameterSetName = 'name')]
+        [string]$Name = 'env:PATH',
 
-        [Parameter(Mandatory = $True, ValueFromPipeline = $True, ParameterSetName='pathspec')]
+        [Parameter(Mandatory = $True, ValueFromPipeline = $True, ParameterSetName = 'pathspec')]
         [string]$Pathspec,
 
         [switch]$Front
@@ -32,14 +32,14 @@ function Add-Path {
                 $pathspec = Get-Variable -Name $Name
             }
         }
-        $paths = $Pathspec -split ';' | Where-Object { $_ -and -not ($Path -contains $_) }
+        $paths = $Pathspec -split [IO.Path]::PathSeparator | Where-Object { $_ -and -not ($Path -contains $_) }
         if ($Front) {
             $paths = $Path + $paths
         }
         else {
             $paths += $Path
         }
-        $Pathspec = ($paths | Where-Object { Test-Path $_ } | Select-Object -Unique) -join ';'
+        $Pathspec = ($paths | Where-Object { Test-Path $_ } | Select-Object -Unique) -join [IO.Path]::PathSeparator
         if ($PSCmdlet.ParameterSetName -eq 'name') {
             if ($isEnv) {
                 Set-Item "env:$Name" $pathspec
