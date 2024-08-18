@@ -22,12 +22,12 @@ function Import-RequiredModule {
 
 # Dot source functions
 (Join-Path $PSScriptRoot 'Functions'), (Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
-Where-Object { Test-Path $_ } |
-ForEach-Object {
-    Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
-        . $_.FullName
+    Where-Object { Test-Path $_ } |
+    ForEach-Object {
+        Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
+            . $_.FullName
+        }
     }
-}
 
 # Write banner
 Import-RequiredModule Figlet -AllowClobber
@@ -100,6 +100,11 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
     Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
 }
 
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    # Setup zoxide
+    Invoke-Expression (& { (zoxide init powershell --hook pwd | Out-String) })
+}
+
 . (Join-Path $PSScriptRoot psreadlinecfg.ps1)
 
 # PowerShell parameter completion shim for the dotnet CLI 
@@ -137,8 +142,8 @@ else {
 
 # Invoke machine specific profile
 @(Join-Path $PSScriptRoot "machine\${env:COMPUTERNAME}\$($MyInvocation.MyCommand.Name)") |
-Where-Object { Test-Path $_ } |
-ForEach-Object { . $_ }
+    Where-Object { Test-Path $_ } |
+    ForEach-Object { . $_ }
 
 # Display notice if there's profile changes
 Push-Location $ProfileDir
