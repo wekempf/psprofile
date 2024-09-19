@@ -138,6 +138,22 @@ else {
     Write-Information "Command 'dotnet' not found."
 }
 
+if (Get-Command -Name winget -ErrorAction SilentlyContinue) {
+    Write-Host -ForegroundColor Blue "Registering argument completer for 'winget'..."
+    Register-ArgumentCompleter -Native -CommandName winget -ScriptBlock {
+        param($wordToComplete, $commandAst, $cursorPosition)
+        [Console]::InputEncoding = [Console]::OutputEncoding = $OutputEncoding = [System.Text.Utf8Encoding]::new()
+        $Local:word = $wordToComplete.Replace('"', '""')
+        $Local:ast = $commandAst.ToString().Replace('"', '""')
+        winget complete --word="$Local:word" --commandline "$Local:ast" --position $cursorPosition | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    }
+}
+else {
+    Write-Information "Command 'winget' not found."
+}
+
 # PowerShell parameter completion shim for the nuke CLI 
 if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'nuke'..."

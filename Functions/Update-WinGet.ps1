@@ -53,3 +53,4 @@ function Update-WinGet {
     }
 }
 Set-Alias -Name udwg -Value Update-WinGet
+Set-Alias -Name wgu -Value Update-WinGet

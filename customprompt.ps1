@@ -67,6 +67,18 @@ function prompt {
         else {
             $gitStatus = ''
         }
+        try {
+            $awsIdentity = Get-AwsIdentity    
+        }
+        catch {
+            <#Do this if a terminating exception happens#>
+        }
+        if ($awsIdentity) {
+            $awsIdentity = " $($PSStyle.Foreground.Yellow)`u{2601}$($PSStyle.Reset)  $($awsIdentity.Environment)"
+        }
+        else {
+            $awsIdentity = ''
+        }
         if (($oldLastExitCode -ne 0) -or ($oldDollarQuestion -eq $false)) {
             $failure = " $($PSStyle.Foreground.Red)`u{1F4A5}$($PSStyle.Reset)"
         }
@@ -76,7 +88,7 @@ function prompt {
         $arrow = "$($IsAdmin ? $PSStyle.Foreground.Red : $PSStyle.Foreground.Blue)$([char]0x2192)$($PSStyle.Reset)"
     
         # Full prompt
-        $prompt = "$user $path$gitStatus$failure"
+        $prompt = "$user $path$gitStatus$awsIdentity$failure"
         (Get-ContentLength $prompt) -gt ($Host.UI.RawUI.WindowSize.Width / 2) ? "$prompt`n$arrow " : "$prompt $arrow "
     }
     finally {
