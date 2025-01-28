@@ -61,12 +61,6 @@
 [fetch]
 	prune = true
 
-# [includeIf "gitdir/i:C:/r/"]
-# 	path = ~/.gitconfig.work
-
-[includeIf "hasconfig:remote.*.url:https://*/slmbank-vsts/**"]
-	path = ~/.gitconfig.work
-
 # We use a special format for this section which allows "git alias" to
 # display a proper help for our aliases. Alias documentation comments
 # need to start with "#-" and aliases need to be defined with tabs
@@ -230,3 +224,11 @@
 	ssc      = "!EDITOR=echo git config --system --edit"
 	sgc      = "!EDITOR=echo git config --global --edit"
 	slc      = "!EDITOR=echo git config --local --edit"
+[credential "https://dev.azure.com"]
+	useHttpPath = true
+[credential]
+	helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe
+
+# Include local configuration if file exists.
+[include]
+	path = ~/.gitconfig-local
