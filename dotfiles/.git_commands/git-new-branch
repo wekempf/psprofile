@@ -17,49 +17,39 @@ p,parent=<parent> the parent branch to use
 "
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
-
-die_with_usage() {
-    printf >&2 '%s\n\n' "$*"
-    usage
-    exit 1
-}
-
-function get-value {
-    IFS='=' read -ra parts <<<"$1"
-    echo ${parts[1]}
-}
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
 
 parent=
-while test $# != 0; do
+while [ "$#" != 0 ]; do
     case "$1" in
-    --parent=*) parent=$(get-value "$1") ;;
-    --)
-        shift
-        break
-        ;;
+    --parent=*) parent=$(get_value "$1") ;;
+    --) shift; break ;;
     esac
     shift
 done
 
-if [ $# -eq 0 ]; then
-    die_with_usage "Missing required branch name argument."
-fi
+ARG_SPEC=('name')
+parse_args "$@"
 
-if [ $# -gt 1 ]; then
-    die_with_usage "Too many arguments."
-fi
-
-gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
-
-if [[ -n $(git status --porcelain) ]]; then
-    die 'Uncommitted changes detected. Commit or stash your changes and try again.'
-fi
+require_branch_does_not_exist "$name"
+require_clean_work_tree
 
 if [ -z "$parent" ]; then
-    remote=$(git remote show)
-    parent="$(git remote show $remote | grep 'HEAD branch' | cut -d' ' -f5)"
+    parent=$(git default-branch)
 fi
 
-git checkout "$parent"
+cur=$(get_current_branch)
+if [ "$cur" != "$parent" ]; then
+    remote=$(get_remote_for_branch "$cur")
+    if [ -n "$remote" ]; then
+        git done
+        if [ "$(get_current_branch)" != "$parent" ]; then
+            git switch "$parent"
+        fi
+    else
+        git switch "$parent"
+    fi
+fi
+
 git pull
-git checkout -b "$1"
+git switch -c "$1"

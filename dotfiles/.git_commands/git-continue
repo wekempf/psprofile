@@ -14,10 +14,10 @@ Continues an in progress cherry-pick, rebase, merge or revert.
 "
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
 
-require_work_tree
+[ "$#" -eq 0 ] || die_with_usage "Too many arguments."
 
-gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
 opfound=
 fcnt=
 for i in cherry-pick merge rebase revert; do

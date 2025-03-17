@@ -190,6 +190,11 @@ if ($IsLinux) {
     Set-Alias -Name ls -Value Get-ChildItem
 }
 
+# Source ~/.container/profile.ps1 if we're running in a container
+if ((Test-Path '/.dockerenv') -and (Test-Path ~/.container/profile.ps1)) {
+    . ~/.container/profile.ps1
+}
+
 # Display notice if there's profile changes
 Push-Location $ProfileDir
 try {

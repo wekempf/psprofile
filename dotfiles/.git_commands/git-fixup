@@ -22,19 +22,17 @@ git fixup [<commit>]
 "
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
 
 while test $# != 0; do
     case "$1" in
-    --)
-        shift
-        break
-        ;;
+    --) shift; break ;;
     esac
     shift
 done
 
-test $# -gt 2 && die "Too many arguments"
-gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
+[ $# -gt 2 ] && die "Too many arguments"
+gitdir=$(get-git-dir)
 
 default_branch=$(git default-branch)
 

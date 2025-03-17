@@ -15,6 +15,12 @@ $GitPromptSettings.FileRemovedText = "`u{1F5D1} "
 $GitPromptSettings.WorkingColor.ForegroundColor = 'Cyan'
 
 function prompt {
+    if ($env:TERM_PROGRAM -ne 'vscode') {
+        $sixel = "`eP0;1q`"1;1;26;20#1;2;89;91;91#2;2;71;77;83#3;2;60;64;77#4;2;50;61;75#5;2;33;42;56#6;2;16;24;36#7;2;13;19;30#8;2;8;14;20#9;2;5;8;11#10;2;2;2;3#1???oE???Ooo_#7?ow[[CC#4!5AC`$#3!4?O?!13A!5?G`$#2!4?GA???G#8!5?__ww{{[CS#2q`$#5!4?_C#4??g#9!12?_wG`$#6!5?w{{CCK[{KC!8?_-#5???O@!4?_!4?_W!6?O@`$#1??wB!6?``b}{W#9?ow{}NFF`$#6???_}~^NDAO#8???@fNFB@#10ow#4_A`$???G!5?@#2AS@A!9?[@`$#3???C#7??_oy[KG?@A!7?G`$#3!14?C-#5??C??C?O??CAK!5?C??G`$#3?_@???O?@???@!5?G??O`$#1?E!4?KMEBB@?!5K#2???_N`$?W!7?C#9_oo_aBBB@?_`$#6??GJ@OA??G???POOO!4?C`$#7??os}B@@O???A!4?O`$#4??A??G??G#10!6?___a~^@`$#8!5?!4_oWK?A@???O??A-#2?@#3@@#4!16@#3@#2@`e\`e[3C "
+    }
+    else {
+        $sixel = ''
+    }
     $oldDollarQuestion = $global:?
     $oldLastExitCode = $global:LASTEXITCODE
     try {
@@ -89,7 +95,7 @@ function prompt {
     
         # Full prompt
         $prompt = "$user $path$gitStatus$awsIdentity$failure"
-        (Get-ContentLength $prompt) -gt ($Host.UI.RawUI.WindowSize.Width / 2) ? "$prompt`n$arrow " : "$prompt $arrow "
+        (Get-ContentLength $prompt) -gt ($Host.UI.RawUI.WindowSize.Width / 2) ? "$sixel$prompt`n$arrow " : "$sixel$prompt $arrow "
     }
     finally {
         $global:LASTEXITCODE = $oldLastExitCode
