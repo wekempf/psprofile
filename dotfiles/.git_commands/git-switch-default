@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+#
+# This script switches to the default branch of the remote
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=t
+OPTIONS_KEEPDASHDASH=
+OPTIONS_SPEC="\
+git switch-default [<remote>]
+
+Switches to the default branch of the remote, which defaults to the result of 'git remote show'.
+--
+<remote>  the remote to get the default branch of; defaults to the result of 'git remote show'
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
+
+while [ "$#" != 0 ]; do
+    case "$1" in
+    --) shift; break ;;
+    esac
+    shift
+done
+
+[ "$#" -gt 1 ] && die_with_usage "Too many arguments."
+
+git switch "$(git default-branch "$@")"

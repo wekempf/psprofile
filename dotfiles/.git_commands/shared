@@ -1,0 +1,77 @@
+function die_with_usage() {
+    printf >&2 '%s\n\n' "$*"
+    usage
+    exit 1
+}
+
+function get_value {
+    IFS='=' read -ra parts <<<"$1"
+    echo ${parts[1]}
+}
+
+function get_current_branch() {
+    echo "$(git symbolic-ref --short HEAD)"
+}
+
+function get_remote_for_branch() {
+    if [ $# -eq 1 ]; then
+        echo "$(git config "branch.$1.remote")"
+    else
+        echo "$(git config "branch.$(get_current_branch).remote")"
+    fi
+}
+
+function require_branch_does_not_exist() {
+    sha=$(git rev-parse --verify "$1" 2>/dev/null)
+    [ -n "$sha" ] && die "Branch $1 already exists."
+}
+
+# Arguments are considered required until an argument name begings
+# with a '?' character. If the final name ends with '..' then it will
+# be considered an array of the remaining arguments.
+#
+# parse_args ('foo' '?bar' 'baz', 'arguments..') $@
+# foo is required
+# bar and baz are optional
+# arguments is an (optional) array of the remaining arguments
+parse_args() {
+    declare -n names='ARG_SPEC'
+    i=0
+    optional=0
+    remaining=0
+    while [ "$i" -lt "${#names[@]}" ]; do
+        name="${names[$i]}"
+        if [ "${name:0:1}" = '?' ]; then
+            optional=1
+            name="${name:1}"
+        fi
+        if [ "${name: -2}" = '..' ]; then
+            remaining=1
+            name="${name:0: -2}"
+        fi
+        if [ "$remaining" -eq 1 ]; then
+            declare -n array="$name"
+            array=("$@")
+            return 0
+        fi
+        if [ "$optional" -eq 1 ]; then
+            if [ "$#" -eq 0 ]; then
+                break
+            fi
+        elif [ "$#" -eq 0 ]; then
+            die_with_usage "Missing required argument."
+        fi
+        declare -n var="$name"
+        var="$1"
+        shift
+        i=$((i + 1))
+    done
+    [ "${#@}" -gt 0 ] && die_with_usage "Too many arguments."
+}
+
+gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
+upstream=${upstream:-"$(git remote show)"}
+local=$(git rev-parse @)
+remote=$(git rev-parse "$upstream")
+base=$(git merge-base @ "$upstream")
+branch=$(git symbolic-ref --short HEAD)

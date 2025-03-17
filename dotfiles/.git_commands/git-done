@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+#
+# This script finishes up a feature branch.
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=true # use long option name in output
+OPTIONS_SPEC="\
+git done
+
+Finishes up a feature branch. Ensures all work has been committed and the remote
+branch has been deleted, or the command does nothing. Checks out the default
+branch, pulls the latest changes, and deletes the feature branch.
+--
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
+
+while [ "$#" != 0 ]; do
+    case "$1" in
+    --) shift; break ;;
+    esac
+    shift
+done
+
+[ "$#" -gt 0 ] && die "Too many arguments"
+
+# Ensure there's no uncommitted changes
+require_clean_work_tree
+
+# Ensure we're in a feature branch with a remote tracking branch
+remote=$(get_remote_for_branch "$branch")
+[ -z "$remote" ] && die "Cannot : No remote tracking branch configured"
+default_branch=$(git default-branch "$remote")
+[ "$default_branch" == "$branch" ] && die "Cannot : Not in a feature branch"
+
+# Ensure the remote branch has been deleted
+remote_ref=$(git ls-remote --heads "$remote" "refs/heads/$branch")
+[ -n "$remote_ref" ] && die "Cannot : Remote branch still exists."
+
+# Check out the default branch, delete the old branch and pull
+git switch "$default_branch"
+git branch -D "$branch"
+git pull
