@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# This script simply echos the user input, but illustrates git subcommand best
-# practices, including how to parse command line options.
+# This script fetches changes from the remote then rebases.
 #
 
 # Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
@@ -43,7 +42,8 @@ curbranch=$(git rev-parse --abbrev-ref HEAD)
 [ "$branch" != "$curbranch" ] || die "Cannot update $branch"
 
 git fetch "$remote" "$branch:$branch" || die "Failed to fetch branch '$branch' from '$remote'"
-git rebase "$branch"
+$base = git merge-base "$branch" "$curbranch"
+git rebase --onto "$branch" "$base"
 
 if [ -f "$(git rev-parse --git-dir)/REBASE_HEAD" ]; then
     echo "Rebasing from '$branch' in progress."
