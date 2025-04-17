@@ -231,4 +231,4 @@
 
 # Include local configuration if file exists.
 [include]
-	path = ~/.gitconfig-local
+	path = ~/.gitconfig.d/local

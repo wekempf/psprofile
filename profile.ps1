@@ -143,6 +143,11 @@ else {
     Write-Information "Command 'dotnet' not found."
 }
 
+if (Get-Command -Name dsc -ErrorAction SilentlyContinue) {
+    Write-Host -ForegroundColor Blue "Registering argument completer for 'dsc'..."
+    dsc completer powershell | Out-String | Invoke-Expression
+}
+
 if (Get-Command -Name winget -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'winget'..."
     Register-ArgumentCompleter -Native -CommandName winget -ScriptBlock {
