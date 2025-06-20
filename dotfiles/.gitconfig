@@ -232,3 +232,11 @@
 # Include local configuration if file exists.
 [include]
 	path = ~/.gitconfig.d/local
+[includeIf "gitdir:~/projects/work/"]
+	path = ~/.gitconfig.d/work
+[includeIf "gitdir:C:/r/"]
+	path = ~/.gitconfig.d/work
+[includeIf "gitdir:~/projects/personal/"]
+	path = ~/.gitconfig.d/personal
+[includeIf "gitdir:C:/rp/"]
+	path = ~/.gitconfig.d/personal
