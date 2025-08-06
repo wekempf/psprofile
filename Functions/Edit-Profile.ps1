@@ -46,3 +46,4 @@ function Edit-Profile {
 }
 
 Set-Alias -Name pro -Value Edit-Profile
+function prop { Edit-Profile -Project }

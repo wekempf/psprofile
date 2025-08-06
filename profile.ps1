@@ -191,11 +191,6 @@ else {
 # Set an alias for invoking build.ps1 scripts in the current location
 Set-Alias -Name b -Value './build.ps1'
 
-# Set an alias for invoking VSCode Insiders version
-if (Test-Path "~\AppData\Local\Programs\Microsoft VS Code Insiders\Code - Insiders.exe") {
-    Set-Alias -Name codei -Value "~\AppData\Local\Programs\Microsoft VS Code Insiders\Code - Insiders.exe"
-}
-
 if ($IsLinux) {
     Set-Alias -Name ls -Value Get-ChildItem
 }
