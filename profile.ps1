@@ -113,21 +113,45 @@ if (Get-Module PowerLocation -ListAvailable) {
 
 . $PSScriptRoot/customprompt.ps1
 
+. (Join-Path $PSScriptRoot psreadlinecfg.ps1)
+
 # Setup our DynamicTitle
 #. (Join-Path $PSScriptRoot DynamicTitle.ps1)
 
 if (Get-Command fzf -ErrorAction SilentlyContinue) {
+    function _fzf_item_preview {
+        param($file)
+        if (Test-Path $file -PathType Container) {
+            return "tree -C $file"
+        }
+        if ($file -match '\.(png|jpg|jpeg|gif)$') {
+            return "imgcat $file"
+        }
+        elseif ($file -match '\.(ps1|sh|py|js|ts|java|c|cpp|cs)$') {
+            return "bat --style=numbers,changes,header --color=always --theme=Dracula --line-range :100 $file"
+        }
+        else {
+            return "cat $file"
+        }
+    }
     # Setup fzf
     Import-RequiredModule PSFzf
-    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r' -PSReadlineChordSetLocation 'Ctrl+l'
+    Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
+    $_fzf_bat_cmd = 'bat --style=numbers,changes,header --color=always --theme=Dracula --line-range :100 {}'
+    $_fzf_fd_all_cmd = 'fd -tf -td -tl {0}' -f $env:FD_OPTIONS
+    $env:FZF_DEFAULT_OPTS = "--prompt '⯈ ' --height 50% --layout=reverse --border --color=dark --color=fg:-1,bg:-1,hl:#5fff87,fg+:-1,bg+:-1,hl+:#ffaf5f --color=info:#af87ff,prompt:#5fff87,pointer:#ff87d7,marker:#ff87d7,spinner:#ff87d7"
+    $env:FD_OPTIONS = '--hidden --follow'
+    $env:FZF_DEFAULT_COMMAND = $_fzf_fd_all_cmd
+    $env:FZF_CTRL_T_OPTS = "--preview `"$_fzf_bat_cmd`""
+    $env:FZF_CTRL_T_COMMAND = $_fzf_fd_all_cmd
 }
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     # Setup zoxide
     Invoke-Expression (& { (zoxide init powershell --hook pwd | Out-String) })
+    $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
 }
-
-. (Join-Path $PSScriptRoot psreadlinecfg.ps1)
 
 # PowerShell parameter completion shim for the dotnet CLI 
 if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
