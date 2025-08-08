@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# This script simply echos the user input, but illustrates git subcommand best
-# practices, including how to parse command line options.
+# This script fetches changes from the remote then rebases.
 #
 
 # Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
@@ -20,12 +19,9 @@ given it's implied to be the default branch of the implied remote.
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
 
-while test $# != 0; do
+while [ "$#" != 0 ]; do
     case "$1" in
-    --)
-        shift
-        break
-        ;;
+    --) shift; break;;
     esac
     shift
 done
@@ -41,12 +37,13 @@ if [ -z "$1" ]; then
     branch="$(git remote show $remote | grep 'HEAD branch' | cut -d' ' -f5)"
 fi
 
-git branch -r | grep -qn ${branch} || die "Branch '$branch' does not exist"
+git branch -r | grep -qn "$branch" || die "Branch '$branch' does not exist"
 curbranch=$(git rev-parse --abbrev-ref HEAD)
 [ "$branch" != "$curbranch" ] || die "Cannot update $branch"
 
-git fetch "$remote" "$branch:$branch"
-git rebase "$branch"
+git fetch "$remote" "$branch:$branch" || die "Failed to fetch branch '$branch' from '$remote'"
+$base = git merge-base "$branch" "$curbranch"
+git rebase --onto "$branch" "$base"
 
 if [ -f "$(git rev-parse --git-dir)/REBASE_HEAD" ]; then
     echo "Rebasing from '$branch' in progress."

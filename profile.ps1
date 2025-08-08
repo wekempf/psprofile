@@ -167,6 +167,27 @@ else {
     Write-Information "Command 'dotnet' not found."
 }
 
+if (Get-Command -Name dsc -ErrorAction SilentlyContinue) {
+    Write-Host -ForegroundColor Blue "Registering argument completer for 'dsc'..."
+    dsc completer powershell | Out-String | Invoke-Expression
+}
+
+if (Get-Command -Name winget -ErrorAction SilentlyContinue) {
+    Write-Host -ForegroundColor Blue "Registering argument completer for 'winget'..."
+    Register-ArgumentCompleter -Native -CommandName winget -ScriptBlock {
+        param($wordToComplete, $commandAst, $cursorPosition)
+        [Console]::InputEncoding = [Console]::OutputEncoding = $OutputEncoding = [System.Text.Utf8Encoding]::new()
+        $Local:word = $wordToComplete.Replace('"', '""')
+        $Local:ast = $commandAst.ToString().Replace('"', '""')
+        winget complete --word="$Local:word" --commandline "$Local:ast" --position $cursorPosition | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    }
+}
+else {
+    Write-Information "Command 'winget' not found."
+}
+
 # PowerShell parameter completion shim for the nuke CLI 
 if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'nuke'..."
@@ -196,6 +217,11 @@ Set-Alias -Name b -Value './build.ps1'
 
 if ($IsLinux) {
     Set-Alias -Name ls -Value Get-ChildItem
+}
+
+# Source ~/.container/profile.ps1 if we're running in a container
+if ((Test-Path '/.dockerenv') -and (Test-Path ~/.container/profile.ps1)) {
+    . ~/.container/profile.ps1
 }
 
 # Display notice if there's profile changes

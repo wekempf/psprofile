@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+#
+# This script creates a WIP (work in progress) commit.
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=true # use long option name in output
+OPTIONS_SPEC="\
+git commit-work-in-progress
+
+Create a work in progress (WIP) commit.
+--
+a,all             Stage files that have been modified and deleted.
+author=<author>   Override the commit author.
+m,message=<msg>   Use the given <msg> as the commit message.
+e,edit            Edit the commit message.
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
+
+all=0
+author=""
+message=""
+edit=0
+while [ $# != 0 ]; do
+    case "$1" in
+    --all) all=1 ;;
+    --no-all) all=0 ;;
+    --author=*) author=$(get_value "$1") ;;
+    --no-author) author="" ;;
+    --message=*) message=$(get_value "$1") ;;
+    --no-message) message="" ;;
+    --edit) edit=1 ;;
+    --no-edit) edit=0 ;;
+    --) shift; break ;;
+    esac
+    shift
+done
+
+[ "$#" -eq 0 ] || die_with_usage "Too many arguments."
+
+if [ -z "$message" ]; then
+    message="WIP"
+else
+    message="WIP: $message"
+fi
+
+args=("-m" "$message")
+if [ "$all" -eq 1 ]; then
+    args+=("--all")
+fi
+if [ -n "$author" ]; then
+    args+=("--author", "$author")
+fi
+if [ "$edit" -eq 1 ]; then
+    args+=("--edit")
+fi
+
+git commit "${args[@]}"

@@ -1,10 +1,10 @@
 # Configure PSReadline
 $PSReadLineOPtions = @{
-    ExtraPromptLineCount = 1
-    HistoryNoDuplicates = $true
+    ExtraPromptLineCount          = 1
+    HistoryNoDuplicates           = $true
     HistorySearchCursorMovesToEnd = $true
-    BellStyle = 'visual'
-    PredictionSource = 'History'
+    BellStyle                     = 'visual'
+    PredictionSource              = 'History'
 }
 Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
@@ -69,22 +69,6 @@ Set-PSReadLineKeyHandler -Chord Alt+c `
     param($key, $arg)
 
     Set-Clipboard $pwd.Path
-}
-Set-PSReadLineKeyHandler -Chord Alt+v `
-    -BriefDescription PasteAsHereString `
-    -LongDescription 'Paste the clipboard text as a here string' `
-    -ScriptBlock {
-    param($key, $arg)
-
-    $clipboardText = Get-Clipboard
-    if ($clipboardText) {
-        # Remove trailing spaces, convert \r\n to \n, and remove the final \n.
-        $text = $clipboardText.TrimEnd() -join "`n"
-        [Microsoft.PowerShell.PSConsoleReadLine]::Insert("@'`n$text`n'@")
-    }
-    else {
-        [Microsoft.PowerShell.PSConsoleReadLine]::Ding()
-    }
 }
 Set-PSReadLineKeyHandler -Chord Alt+v `
     -BriefDescription PasteAsHereString `

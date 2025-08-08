@@ -35,7 +35,7 @@
 	remote = bold red
   
 [core]
-	editor = \"code\" --wait
+	editor = "code --wait"
 	excludesfile = ~/.gitignore
 	symlinks = false
 	autocrlf = true
@@ -61,12 +61,6 @@
 [fetch]
 	prune = true
 
-# [includeIf "gitdir/i:C:/r/"]
-# 	path = ~/.gitconfig.work
-
-[includeIf "hasconfig:remote.*.url:https://*/slmbank-vsts/**"]
-	path = ~/.gitconfig.work
-
 # We use a special format for this section which allows "git alias" to
 # display a proper help for our aliases. Alias documentation comments
 # need to start with "#-" and aliases need to be defined with tabs
@@ -90,9 +84,13 @@
 	brc		= "!git rev-parse --abbrev-ref HEAD"
 	#- Checkout
 	co 		= "checkout"
+	#- Switch
+	sw		= "switch"
 	#- Checks out the default branch
 	#-   git cod
-	cod		= "!git brd | xargs git co"
+	cod		= "switch-default"
+	#-   git sd
+	sd		= "switch-default"
 	#- Checkout new branch
 	#-   git cob <name> [additional-checkout-options]
 	cob		= "checkout -b"
@@ -120,7 +118,7 @@
 	#- Commit all with a comment
 	cm		= "!git add -A && git commit -m"
 	#- Commits with a "WIP" (Work In Progress) message.
-	wip		= "commit -am 'WIP'"
+	wip		= "commit-work-in-progress --all"
 	#- Commits all work with a SAVEPOINT commit message.
 	save	= "!git add -A && git commit -m 'SAVEPOINT'"
 	#- Reset the previous commit but keep changes in working directory.
@@ -199,7 +197,7 @@
 	#- original branch. Accepts a parameter to use a branch other than the
 	#- default branch.
 	#   git done [source-branch] [remote]
-	done = "!f() { defbranch=${2-$(git brd)} && curbranch=${1-$(git show-current)} && git checkout $defbranch && git pull && git branch -D $curbranch; }; f"
+	#done = "!f() { defbranch=${2-$(git brd)} && curbranch=${1-$(git show-current)} && git checkout $defbranch && git pull && git branch -D $curbranch; }; f"
 	#- Show last commit
 	last	= log -1 HEAD
 	#- Shows last commit in "long format" (includes files committed)
@@ -230,3 +228,15 @@
 	ssc      = "!EDITOR=echo git config --system --edit"
 	sgc      = "!EDITOR=echo git config --global --edit"
 	slc      = "!EDITOR=echo git config --local --edit"
+
+# Include local configuration if file exists.
+[include]
+	path = ~/.gitconfig.d/local
+[includeIf "gitdir:~/projects/work/"]
+	path = ~/.gitconfig.d/work
+[includeIf "gitdir:C:/r/"]
+	path = ~/.gitconfig.d/work
+[includeIf "gitdir:~/projects/personal/"]
+	path = ~/.gitconfig.d/personal
+[includeIf "gitdir:C:/rp/"]
+	path = ~/.gitconfig.d/personal

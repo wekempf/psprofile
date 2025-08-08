@@ -7,30 +7,22 @@
 OPTIONS_STUCKLONG=t
 OPTIONS_KEEPDASHDASH=
 OPTIONS_SPEC="\
-git default-branch [<remote>]
+git default-branch [options]
 --
-<remote>  the remote to get the default branch of; defaults to the result of 'git remote show'
+r,remote!=<remote>  the remote to get the default branch of; defaults to the result of 'git remote show'
 "
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
 
-while test $# != 0; do
+while [ "$#" != 0 ]; do
     case "$1" in
-    --)
-        shift
-        break
-        ;;
+    --) shift; break ;;
+    --remote=*) remote_name=$(get_value "$1") ;;
     esac
     shift
 done
 
-test $# -gt 2 && die "Too many arguments"
-gitdir="$(git rev-parse --git-dir)" || die "Not in a Git working directory"
+[ ! "$remote_name" ] && remote_name=$(git remote show)
 
-if [ $# -eq 1 ]; then
-    remote=$1
-else
-    remote=$(git remote show)
-fi
-
-git symbolic-ref -q "refs/remotes/$remote/HEAD" | sed 's@^refs/remotes/origin/@@'
+git symbolic-ref -q "refs/remotes/$remote_name/HEAD" | sed "s@^refs/remotes/$remote_name/@@"

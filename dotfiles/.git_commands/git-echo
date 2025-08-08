@@ -5,8 +5,7 @@
 #
 
 # Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
-OPTIONS_STUCKLONG=t
-OPTIONS_KEEPDASHDASH=
+OPTIONS_STUCKLONG=true # use long option name in output
 OPTIONS_SPEC="\
 git echo [options] <text>
 
@@ -17,6 +16,7 @@ c,color=     echo in the specified color
 "
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
 
 # Defaults
 REVERSE=false

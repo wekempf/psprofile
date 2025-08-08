@@ -18,32 +18,24 @@ p,parent=<parent>   the parent branch to use
 "
 
 SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
-
-function get-value {
-    IFS='=' read -ra parts <<<"$1"
-    echo ${parts[1]}
-}
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
 
 parent=
 while test $# != 0; do
     case "$1" in
-    --parent=*) parent=$(get-value "$1") ;;
-    --)
-        shift
-        break
-        ;;
+    --parent=*) parent=$(get_value "$1") ;;
+    --) shift; break ;;
     esac
     shift
 done
 
-if [[ -n $(git status --porcelain) ]]; then
-    die 'Uncommitted changes detected. Commit or stash your changes and try again.'
-fi
+ARG_SPEC=('name')
+parse_args "$@"
 
 branch_prefix=$(git config --get new-branch.feature.prefix)
 branch_prefix=${branch_prefix:-feature}
 
-args=("$branch_prefix/$1")
+args=("$branch_prefix/$name")
 if [ -n "$parent" ]; then
     args+=("--parent" "$parent")
 fi

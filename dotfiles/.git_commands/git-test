@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# This script simply echos the user input, but illustrates git subcommand best
+# practices, including how to parse command line options.
+#
+
+# Use git-sh-setup: https://www.kernel.org/pub/software/scm/git/docs/git-sh-setup.html
+OPTIONS_STUCKLONG=true # use long option name in output
+OPTIONS_SPEC="\
+git test
+
+Test command, mostly intended as a template for other commands.
+--
+"
+
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+. "$(dirname -- "$(readlink -f "$BASH_SOURCE")")/shared"
+
+while [ $# != 0 ]; do
+    case "$1" in
+    --) shift; break ;;
+    esac
+    shift
+done
+
+ARG_SPEC=('foo' 'bar' '?baz' 'args..')
+parse_args "$@"
+
+echo "foo: $foo bar: $bar baz: $baz args: ${args[*]}"
+
+echo "upstream: $upstream"
+echo "local: $local"
+echo "remote: $remote"
+echo "base: $base"
+echo "branch: $branch"

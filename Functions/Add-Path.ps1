@@ -14,7 +14,7 @@ function Add-Path {
     )
 
     begin {
-        $Path = $Path | ForEach-Object { Resolve-Path $_ }
+        $Path = $Path | ForEach-Object { Resolve-Path $_ -ErrorAction SilentlyContinue } | Where-Object { $_ }
         if ($PSCmdlet.ParameterSetName -eq 'name') {
             $isEnv = $Name.StartsWith('env:', 'CurrentCultureIgnoreCase')
             if ($isEnv) {
