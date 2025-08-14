@@ -19,7 +19,7 @@ function Import-RequiredModule {
 
     $Name | ForEach-Object {
         if (-not (Get-Module -Name $_ -ListAvailable)) {
-            Install-Module -Name $_ -Scope CurrentUser -AllowClobber:$AllowClobber # -Repository PSGallery
+            Install-Module -Name $_ -Scope CurrentUser -AllowClobber:$AllowClobber
         }
         Import-Module $_
     }
@@ -106,10 +106,10 @@ if ($IsWindows) {
 
 Import-RequiredModule posh-git
 
-if (Get-Module PowerLocation -ListAvailable) {
-    Import-Module PowerLocation
-    Set-Alias -Name z -Value Set-PowerLocation
-}
+# if (Get-Module PowerLocation -ListAvailable) {
+#     Import-Module PowerLocation
+#     Set-Alias -Name z -Value Set-PowerLocation
+# }
 
 . $PSScriptRoot/customprompt.ps1
 
@@ -119,38 +119,35 @@ if (Get-Module PowerLocation -ListAvailable) {
 #. (Join-Path $PSScriptRoot DynamicTitle.ps1)
 
 if (Get-Command fzf -ErrorAction SilentlyContinue) {
-    function _fzf_item_preview {
-        param($file)
-        if (Test-Path $file -PathType Container) {
-            return "tree -C $file"
-        }
-        if ($file -match '\.(png|jpg|jpeg|gif)$') {
-            return "imgcat $file"
-        }
-        elseif ($file -match '\.(ps1|sh|py|js|ts|java|c|cpp|cs)$') {
-            return "bat --style=numbers,changes,header --color=always --theme=Dracula --line-range :100 $file"
-        }
-        else {
-            return "cat $file"
-        }
-    }
     # Setup fzf
     Import-RequiredModule PSFzf
     Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r' -PSReadlineChordSetLocation 'Ctrl+l'
     Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
-    $_fzf_bat_cmd = 'bat --style=numbers,changes,header --color=always --theme=Dracula --line-range :100 {}'
+    $_fzf_bat_cmd = 'bat --color=always --line-range :100 {}'
     $_fzf_fd_all_cmd = 'fd -tf -td -tl {0}' -f $env:FD_OPTIONS
     $env:FZF_DEFAULT_OPTS = "--prompt '⯈ ' --height 50% --layout=reverse --border --color=dark --color=fg:-1,bg:-1,hl:#5fff87,fg+:-1,bg+:-1,hl+:#ffaf5f --color=info:#af87ff,prompt:#5fff87,pointer:#ff87d7,marker:#ff87d7,spinner:#ff87d7"
     $env:FD_OPTIONS = '--hidden --follow'
     $env:FZF_DEFAULT_COMMAND = $_fzf_fd_all_cmd
     $env:FZF_CTRL_T_OPTS = "--preview `"$_fzf_bat_cmd`""
     $env:FZF_CTRL_T_COMMAND = $_fzf_fd_all_cmd
+
+    Set-Alias -Name fe -Value Invoke-FuzzyEdit
+    Set-Alias -Name fgs -Value Invoke-FuzzyGitStatus
+    Set-Alias -Name fh -Value Invoke-FuzzyHistory
+    Set-Alias -Name fkill -Value Invoke-FuzzyKillProcess
+    Set-Alias -Name fcd -Value Invoke-FuzzySetLocation
 }
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     # Setup zoxide
-    Invoke-Expression (& { (zoxide init powershell --hook pwd | Out-String) })
+    Invoke-Expression (& { (zoxide init powershell --hook pwd --cmd cd | Out-String) })
     $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
+}
+
+if (Get-Command bat -ErrorAction SilentlyContinue) {
+    # Setup bat
+    $env:BAT_THEME = 'Nord'
+    $env:BAT_STYLE = 'changes,header,numbers'
 }
 
 # PowerShell parameter completion shim for the dotnet CLI 
