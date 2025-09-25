@@ -221,6 +221,10 @@ if ((Test-Path '/.dockerenv') -and (Test-Path ~/.container/profile.ps1)) {
     . ~/.container/profile.ps1
 }
 
+if (Get-Command -Name flightplan -ErrorAction SilentlyContinue) {
+    Set-Alias -Name fp -Value flightplan
+}
+
 # Display notice if there's profile changes
 Push-Location $ProfileDir
 try {
