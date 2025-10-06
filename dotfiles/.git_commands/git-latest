@@ -1,0 +1,78 @@
+#!/usr/bin/env sh
+# git-latest: Rebase current branch onto the latest remote changes
+. "$(git --exec-path)/git-sh-setup"
+
+# Requirements that must be satisfied
+require_work_tree
+require_clean_work_tree latest "Please commit or stash your changes first."
+
+# Common variables
+USAGE="git latest [remote]"
+SUBDIRECTORY_OK=1
+OPTIONS_SPEC="\
+git latest [<remote>]
+
+Rebase current branch onto the latest remote changes.
+If remote is not provided, uses the first remote or 'origin' as fallback.
+First rebases onto remote/branch if it exists, then onto remote/default-branch if different.
+--
+h,help show the help
+"
+
+# Parse options
+eval "$(echo "$OPTIONS_SPEC" | git rev-parse --parseopt -- "$@" || echo exit $?)"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage ;;
+    --) shift; break ;;
+    -*) die "Unknown option: $1" ;;
+    *) break ;;
+  esac
+done
+
+# Get remote - use argument if provided, otherwise get first remote, fallback to 'origin'
+if [ $# -gt 0 ]; then
+    remote="$1"
+else
+    remote=$(git remote show | head -n 1)
+    if [ -z "$remote" ]; then
+        remote="origin"
+    fi
+fi
+
+# Verify remote exists
+if ! git remote | grep -q "^${remote}$"; then
+    die "Remote '$remote' does not exist"
+fi
+
+# Get current branch
+branch=$(git rev-parse --abbrev-ref HEAD) || die "Failed to get current branch"
+
+if [ "$branch" = "HEAD" ]; then
+    die "You are in detached HEAD state. Please checkout a branch first."
+fi
+
+# Get default branch for the remote
+defaultBranch=$(git default-branch --remote "$remote" 2>/dev/null)
+if [ $? -ne 0 ] || [ -z "$defaultBranch" ]; then
+    die "Failed to get default branch for remote '$remote'. Make sure 'git default-branch' command exists."
+fi
+
+# Fetch the remote
+echo "Fetching $remote..."
+git fetch "$remote" || die "Failed to fetch from remote '$remote'"
+
+# Check if remote/branch exists and rebase onto it
+if git show-ref --verify --quiet "refs/remotes/$remote/$branch"; then
+    echo "Rebasing $branch onto $remote/$branch..."
+    git rebase "$remote/$branch" || die "Rebase onto $remote/$branch failed with conflicts. Please resolve and continue manually."
+fi
+
+# If remote/branch is different from remote/defaultBranch, also rebase onto remote/defaultBranch
+if [ "$branch" != "$defaultBranch" ] && git show-ref --verify --quiet "refs/remotes/$remote/$defaultBranch"; then
+    echo "Rebasing $branch onto $remote/$defaultBranch..."
+    git rebase "$remote/$defaultBranch" || die "Rebase onto $remote/$defaultBranch failed with conflicts. Please resolve and continue manually."
+fi
+
+echo "Successfully updated $branch with latest changes from $remote"

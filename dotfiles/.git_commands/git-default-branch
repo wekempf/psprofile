@@ -24,5 +24,6 @@ while [ "$#" != 0 ]; do
 done
 
 [ ! "$remote_name" ] && remote_name=$(git remote show)
+[ ! "$remote_name" ] && die "No remote found"
 
 git symbolic-ref -q "refs/remotes/$remote_name/HEAD" | sed "s@^refs/remotes/$remote_name/@@"
