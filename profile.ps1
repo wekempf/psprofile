@@ -140,7 +140,7 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     # Setup zoxide
-    Invoke-Expression (& { (zoxide init powershell --hook pwd --cmd cd | Out-String) })
+    Invoke-Expression (& { (zoxide init powershell --cmd cd --hook pwd | Out-String) })
     $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
 }
 
@@ -199,6 +199,12 @@ if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
 }
 else {
     Write-Information "Command 'nuke' not found."
+}
+
+if (Get-Command -Name npm -ErrorAction SilentlyContinue) {
+    if ($env:PATH -notlike "*npm*") {
+        $env:PATH += ";$(npm config get prefix)"
+    }
 }
 
 # Hopefully temporary fix for "dotnet new" slowness (https://github.com/dotnet/templating/issues/2093)
