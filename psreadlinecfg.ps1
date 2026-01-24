@@ -9,6 +9,7 @@ $PSReadLineOPtions = @{
 Set-PSReadLineOption @PSReadLineOptions
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
 Set-PSReadLineKeyHandler -Key 'Alt+9' `
     -BriefDescription ParenthesizeSelection `
     -LongDescription 'Put parenthesis around the selection or entire line and move the cursor to after the closing parenthesis' `
@@ -118,5 +119,55 @@ Set-PSReadLineKeyHandler -Chord Alt+r `
                 }
             }
         }
+    }
+}
+function PSReadLineRunCommand {
+    param(
+        [string]$command
+    )
+    [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
+    [Microsoft.PowerShell.PSConsoleReadLine]::Insert($command)
+    [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+}
+Set-PSReadLineKeyHandler -Chord Ctrl+b `
+    -BriefDescription Build `
+    -LongDescription 'Builds the project in the current location' `
+    -ScriptBlock {
+    param($key, $arg)
+    if (Test-Path './build.ps1') {
+        PSReadLineRunCommand './build.ps1'
+    }
+    elseif (Test-Path './*.sln') {
+        PSReadLineRunCommand 'dotnet build'
+    }
+    elseif (Test-Path './*.csproj') {
+        PSReadLineRunCommand 'dotnet build'
+    }
+}
+Set-PSReadLineKeyHandler -Chord Ctrl+t `
+    -BriefDescription Build `
+    -LongDescription 'Builds the project in the current location' `
+    -ScriptBlock {
+    param($key, $arg)
+    if (Test-Path './test.ps1') {
+        PSReadLineRunCommand './test.ps1'
+    }
+    elseif (Test-Path './build.ps1') {
+        $tasks = & './build.ps1' ? | Select-Object -ExpandProperty Name
+        if ($tasks -contains 'test') {
+            PSReadLineRunCommand './build.ps1 test'
+        }
+        elseif ($tasks -contains 'unittest') {
+            PSReadLineRunCommand './build.ps1 unittest'
+        }
+        elseif ($tasks -contains 'unit-test') {
+            PSReadLineRunCommand './build.ps1 unit-test'
+        }
+    }
+    elseif (Test-Path './*.sln') {
+        PSReadLineRunCommand 'dotnet clean && dotnet test'
+    }
+    elseif (Test-Path './*.csproj') {
+        PSReadLineRunCommand 'dotnet clean && dotnet test'
     }
 }

@@ -1,3 +1,10 @@
 {
-    "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationForFirstPipeline"
+    "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationForFirstPipeline",
+    "cSpell.words": [
+        "customprompt",
+        "fkill",
+        "imgcat",
+        "Nord",
+        "psreadlinecfg"
+    ]
 }

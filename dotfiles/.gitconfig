@@ -240,3 +240,5 @@
 	path = ~/.gitconfig.d/personal
 [includeIf "gitdir:C:/rp/"]
 	path = ~/.gitconfig.d/personal
+[includeIf "gitdir:~/AppData/Local/SallieMae/FlightPlan/Sources"]
+	path = ~/.gitconfig.d/work
