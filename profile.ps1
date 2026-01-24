@@ -149,7 +149,7 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     # Setup zoxide
-    Invoke-Expression (& { (zoxide init powershell --hook pwd | Out-String) })
+    Invoke-Expression (& { (zoxide init powershell --hook pwd --cmd cd | Out-String) })
     $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
 }
 
