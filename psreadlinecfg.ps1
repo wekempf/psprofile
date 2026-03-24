@@ -146,7 +146,7 @@ Set-PSReadLineKeyHandler -Chord Ctrl+b `
 }
 Set-PSReadLineKeyHandler -Chord Ctrl+t `
     -BriefDescription Build `
-    -LongDescription 'Builds the project in the current location' `
+    -LongDescription 'Builds and tests the project in the current location' `
     -ScriptBlock {
     param($key, $arg)
     if (Test-Path './test.ps1') {
