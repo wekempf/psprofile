@@ -242,5 +242,7 @@
 	path = ~/.gitconfig.d/personal
 [includeIf "gitdir:~/AppData/Local/SallieMae/FlightPlan/Sources"]
 	path = ~/.gitconfig.d/work
+[includeIf "gitdir:/home/"]
+	path = ~/.gitconfig.d/posix
 [credential "https://dev.azure.com"]
 	useHttpPath = true
