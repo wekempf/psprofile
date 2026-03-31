@@ -66,7 +66,7 @@ function prompt {
         
         return $parts -join ' '
     }
-    
+
     if ($env:TERM_PROGRAM -ne 'vscode') {
         $sixel = "`eP0;1q`"1;1;26;20#1;2;89;91;91#2;2;71;77;83#3;2;60;64;77#4;2;50;61;75#5;2;33;42;56#6;2;16;24;36#7;2;13;19;30#8;2;8;14;20#9;2;5;8;11#10;2;2;2;3#1???oE???Ooo_#7?ow[[CC#4!5AC`$#3!4?O?!13A!5?G`$#2!4?GA???G#8!5?__ww{{[CS#2q`$#5!4?_C#4??g#9!12?_wG`$#6!5?w{{CCK[{KC!8?_-#5???O@!4?_!4?_W!6?O@`$#1??wB!6?``b}{W#9?ow{}NFF`$#6???_}~^NDAO#8???@fNFB@#10ow#4_A`$???G!5?@#2AS@A!9?[@`$#3???C#7??_oy[KG?@A!7?G`$#3!14?C-#5??C??C?O??CAK!5?C??G`$#3?_@???O?@???@!5?G??O`$#1?E!4?KMEBB@?!5K#2???_N`$?W!7?C#9_oo_aBBB@?_`$#6??GJ@OA??G???POOO!4?C`$#7??os}B@@O???A!4?O`$#4??A??G??G#10!6?___a~^@`$#8!5?!4_oWK?A@???O??A-#2?@#3@@#4!16@#3@#2@`e\`e[3C "
     }
@@ -82,8 +82,43 @@ function prompt {
         if (Get-Command git -ErrorAction SilentlyContinue) {
             $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
             if ($branch) {
-                $dirty = (git status --porcelain 2>$null) ? " `u{2728}" : ''
-                $gitstatus = " $($PSStyle.Foreground.Yellow)($branch$dirty)$($PSStyle.Reset)"
+                $gs = (git status --porcelain 2>$null)
+                $dirty = ''
+                if ($gs | Select-String -Pattern '^\?\?') {
+                    # Untracked files
+                    $dirty += "$($PSStyle.Foreground.Red)`u{25CF}$($PSStyle.Reset)"
+                }
+                if ($gs | Select-String -Pattern '^.[^ ?]') {
+                    # Unstaged changes
+                    $dirty += "$($PSStyle.Foreground.Yellow)`u{25CF}$($PSStyle.Reset)"
+                }
+                if ($gs | Select-String -Pattern '^[^? ]') {
+                    # Staged changes
+                    $dirty += "$($PSStyle.Foreground.Green)`u{25CF}$($PSStyle.Reset)"
+                }
+                if ($dirty) {
+                    $dirty = " $dirty"
+                }
+                $inAction = $False
+                $gitDir = git rev-parse --git-dir 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    $specialStates = @(
+                        "MERGE_HEAD",
+                        "REBASE_HEAD",
+                        "rebase-apply",
+                        "rebase-merge",
+                        "CHERRY_PICK_HEAD",
+                        "REVERT_HEAD",
+                        "BISECT_LOG"
+                    )
+                    foreach ($state in $specialStates) {
+                        if (Test-Path (Join-Path $gitDir $state)) {
+                            $inAction = $True
+                            break
+                        }
+                    }
+                }
+                $gitstatus = " $($inAction ? $PSStyle.Foreground.Red : $PSStyle.Foreground.Blue)`u{2387} $branch$($PSStyle.Reset)$dirty"
             }
             else {
                 $gitstatus = ''
