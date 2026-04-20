@@ -5,6 +5,7 @@
         "fkill",
         "imgcat",
         "Nord",
-        "psreadlinecfg"
+        "psreadlinecfg",
+        "zquery"
     ]
 }

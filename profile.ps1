@@ -140,7 +140,16 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     # Setup zoxide
-    Invoke-Expression (& { (zoxide init powershell --cmd cd --hook pwd | Out-String) })
+    Invoke-Expression (& { (zoxide init powershell --cmd z --hook pwd | Out-String) })
+    Set-Alias -Name cd -Value z -Option AllScope
+    Register-ArgumentCompleter -CommandName z -Native -ScriptBlock {
+        param($stringMatch)
+        $zquery = zoxide query -l $stringMatch
+        $iquery = Get-ChildItem "$stringMatch*" -Directory -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }
+        @($zquery) + @($iquery) | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+        }
+    }
     $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
 }
 
@@ -203,7 +212,7 @@ else {
 
 if (Get-Command -Name npm -ErrorAction SilentlyContinue) {
     if ($env:PATH -notlike "*npm*") {
-        $env:PATH += ";$(npm config get prefix)"
+        $env:PATH += "; $(npm config get prefix)"
     }
 }
 
@@ -251,4 +260,14 @@ try {
 }
 finally {
     Pop-Location
+}
+
+# Copilot aliases
+if (Get-Command -Name copilot -ErrorAction SilentlyContinue) {
+    function co { copilot --model claude-sonnet-4.5 @args }
+    function coy { copilot --model claude-sonnet-4.5 --allow-all-tools @args }
+    function coh { copilot --model claude-haiku-4.5 @args }
+    function cohy { copilot --model claude-haiku-4.5 --allow-all-tools @args }
+    function cog { copilot --model gpt-5 @args }
+    function cogy { copilot --model gpt-5 --allow-all-tools @args }
 }
