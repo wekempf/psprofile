@@ -271,3 +271,6 @@ if (Get-Command -Name copilot -ErrorAction SilentlyContinue) {
     function cog { copilot --model gpt-5 @args }
     function cogy { copilot --model gpt-5 --allow-all-tools @args }
 }
+
+function pd { Set-Location $ProfileDir }
+function ep { code $ProfileDir }
