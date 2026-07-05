@@ -159,6 +159,13 @@ if (Get-Command bat -ErrorAction SilentlyContinue) {
     $env:BAT_STYLE = 'changes,header,numbers'
 }
 
+if (Get-Command claude -ErrorAction SilentlyContinue) {
+    Set-Alias -Name cld -Value claude
+    function cldy {
+        claude --dangerously-skip-permissions $args
+    }
+}
+
 # PowerShell parameter completion shim for the dotnet CLI 
 if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'dotnet'..."

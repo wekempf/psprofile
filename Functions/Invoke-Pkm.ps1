@@ -15,5 +15,5 @@ function Register-PkmVault {
     Set-Alias -Name $Alias -Value $funcName -Scope Global
 }
 
-Register-PkmVault -Name 'Pkm' -VaultPath '~/pkm'
+#Register-PkmVault -Name 'Pkm' -VaultPath '~/pkm'
 # Register-PkmVault -Name 'WorkPkm' -VaultPath '~/work-pkm' -Alias 'wpkm'
