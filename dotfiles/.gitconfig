@@ -38,7 +38,7 @@
 	editor = "code --wait"
 	excludesfile = ~/.gitignore
 	symlinks = false
-	autocrlf = true
+	autocrlf = input
 	longpaths = true
 
 [push]
