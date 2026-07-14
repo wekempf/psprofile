@@ -220,7 +220,27 @@ if ($IsWindows) {
     }
 }
 
-Import-RequiredModule posh-git
+# posh-git's module import costs ~2.3s here - the single largest startup cost
+# measured on this machine, bigger than the Figlet import or Functions dot-source
+# combined. Its prompt integration isn't used (customprompt.ps1 has its own
+# git-status logic), only its git/tgit/gitk tab completion, so instead of importing
+# it eagerly every startup, register a lightweight stub completer that imports the
+# real module (and pays that cost) only the first time a git command is actually
+# tab-completed in a session - which may never happen. Register-ArgumentCompleter
+# replaces any existing registration for the same command name, and posh-git
+# registers its own real completer for the same commands when it imports, so after
+# the first real completion, subsequent ones go straight to posh-git's own
+# implementation, not this stub.
+# To back this out: replace this block with `Import-RequiredModule posh-git`.
+Register-ArgumentCompleter -CommandName git, tgit, gitk, g -Native -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+    if (-not (Get-Module posh-git)) {
+        Import-Module posh-git
+    }
+    $padLength = $cursorPosition - $commandAst.Extent.StartOffset
+    $textToComplete = $commandAst.ToString().PadRight($padLength, ' ').Substring(0, $padLength)
+    Expand-GitCommand $textToComplete
+}
 
 # if (Get-Module PowerLocation -ListAvailable) {
 #     Import-Module PowerLocation
