@@ -253,7 +253,9 @@ if (Get-Command -Name flightplan -ErrorAction SilentlyContinue) {
 }
 
 # Display notice if there's profile changes
-# git status is fast (local); git fetch runs in background to avoid blocking startup
+# git status is fast (local); git fetch runs in a background process (not a PowerShell
+# job - Start-Job requires a runspace and fails under ConstrainedLanguage mode, which is
+# enforced on some locked-down machines) to avoid blocking startup.
 Push-Location $ProfileDir
 try {
     if (Get-Command -Name git -ErrorAction SilentlyContinue) {
@@ -261,15 +263,17 @@ try {
             Write-Warning 'Profile changes need to be committed and pushed'
         }
         else {
-            $global:_ProfileGitJob = Start-Job -ScriptBlock {
-                param($dir)
-                Set-Location $dir
-                git fetch 2>&1 | Out-Null
-                [PSCustomObject]@{
-                    Ahead  = [int](git rev-list --count origin..HEAD 2>$null)
-                    Behind = [int](git rev-list --count HEAD..origin 2>$null)
-                }
-            } -ArgumentList $ProfileDir
+            try {
+                $global:_ProfileGitFetchLog = [System.IO.Path]::GetTempFileName()
+                $global:_ProfileGitFetchProcess = Start-Process -FilePath git -ArgumentList 'fetch' `
+                    -WorkingDirectory $ProfileDir -WindowStyle Hidden -PassThru `
+                    -RedirectStandardOutput $global:_ProfileGitFetchLog -RedirectStandardError $global:_ProfileGitFetchLog
+            }
+            catch {
+                Remove-Item $global:_ProfileGitFetchLog -Force -ErrorAction SilentlyContinue
+                $global:_ProfileGitFetchLog = $null
+                $global:_ProfileGitFetchProcess = $null
+            }
         }
     }
 }
@@ -277,25 +281,29 @@ finally {
     Pop-Location
 }
 
-# Wrap prompt to display the fetch result once the background job completes
+# Wrap prompt to display the fetch result once the background process completes
 # NOTE: capture the ScriptBlock (not the FunctionInfo) - invoking a FunctionInfo via
 # `&` re-resolves "prompt" by name, which after Set-Item below would recurse into the
 # wrapper itself and blow the call stack instead of calling the original prompt.
 $global:_origPromptFn = (Get-Item Function:\prompt).ScriptBlock
 Set-Item Function:\prompt -Value {
-    if ($global:_ProfileGitJob -and $global:_ProfileGitJob.State -ne 'Running') {
+    if ($global:_ProfileGitFetchProcess -and $global:_ProfileGitFetchProcess.HasExited) {
         try {
-            $r = Receive-Job $global:_ProfileGitJob -ErrorAction SilentlyContinue
-            if ($r.Ahead -gt 0) {
+            Push-Location $ProfileDir
+            $ahead = [int](git rev-list --count origin..HEAD 2>$null)
+            $behind = [int](git rev-list --count HEAD..origin 2>$null)
+            if ($ahead -gt 0) {
                 Write-Warning 'Local profile changes need to be pushed'
             }
-            elseif ($r.Behind -gt 0) {
+            elseif ($behind -gt 0) {
                 Write-Warning 'Remote profile changes need to be merged'
             }
         }
         finally {
-            Remove-Job $global:_ProfileGitJob -Force
-            $global:_ProfileGitJob = $null
+            Pop-Location
+            Remove-Item $global:_ProfileGitFetchLog -Force -ErrorAction SilentlyContinue
+            $global:_ProfileGitFetchProcess = $null
+            $global:_ProfileGitFetchLog = $null
         }
     }
     & $global:_origPromptFn
