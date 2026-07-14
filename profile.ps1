@@ -122,7 +122,6 @@ foreach ($file in $uncombinableFiles) {
 }
 
 # Write banner
-Import-RequiredModule Figlet -AllowClobber
 if ($IsWindows) {
     $script:ComputerName = $env:COMPUTERNAME
 }
@@ -134,7 +133,39 @@ elseif ($IsLinux) {
         $script:ComputerName = Get-Content /etc/hostname
     }
 }
-Write-Figlet $script:ComputerName -Font big -Foreground ($IsAdmin ? 'Red' : 'Blue')
+
+# Import-RequiredModule Figlet + Write-Figlet costs roughly 1.2-1.4s on this machine
+# (almost entirely the module import - Figlet is a compiled .NET module bundling ~150
+# font .zip files). The rendered banner only ever changes if the hostname or font
+# changes, so the plain (uncolored) ASCII art is cached to a local, non-git,
+# machine-specific file and reused on every startup after the first; colors are still
+# applied fresh each run based on the current $IsAdmin state.
+#
+# Write-Figlet writes its colored output directly to the host UI rather than through
+# the normal success/output stream, so it can't be captured by piping to Out-String in
+# this process - capturing it requires real stdout redirection from a separate
+# process. That one-time cost only happens on a cache miss (first run on a machine, or
+# after the hostname/font changes).
+$FigletFont = 'big'
+$FigletCacheDir = Join-Path $env:LOCALAPPDATA 'psprofile\cache'
+$FigletCacheFile = Join-Path $FigletCacheDir "figlet-$script:ComputerName-$FigletFont.txt"
+
+if (-not (Test-Path $FigletCacheFile) -or (Get-Item $FigletCacheFile).Length -eq 0) {
+    if (-not (Test-Path $FigletCacheDir)) {
+        New-Item -ItemType Directory -Path $FigletCacheDir -Force | Out-Null
+    }
+    # $env:PSModulePath already includes $ModuleDir (set above) and is inherited by
+    # this child process, so Figlet resolves by name without a hardcoded version path.
+    # Casting the Write-Figlet result to [string] gives the plain rendered text
+    # (ToString(), no color codes) directly, avoiding the extra blank separator lines
+    # that Out-String/default formatting inserts between rows.
+    $genScript = "Import-Module Figlet; [string](Write-Figlet '$script:ComputerName' -Font $FigletFont)"
+    & pwsh -NoProfile -Command $genScript *> $FigletCacheFile
+}
+
+Get-Content $FigletCacheFile | ForEach-Object {
+    Write-Host $_ -ForegroundColor ($IsAdmin ? 'Red' : 'Blue')
+}
 
 # Configure environment variables
 if (Get-Command -Name code -ErrorAction SilentlyContinue) {
