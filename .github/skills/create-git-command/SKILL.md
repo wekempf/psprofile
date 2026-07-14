@@ -47,7 +47,7 @@ do
     case "$1" in
     -v|--verbose) verbose=t ;;
     -n|--dry-run) dry_run=t ;;
-    -o|--output) shift; output=$1 ;;
+    --output=*) output=${1#--output=} ;;
     --) shift; break ;;
     *) usage ;;
     esac
@@ -85,12 +85,19 @@ SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
 After sourcing, `git-sh-setup` evaluates `OPTIONS_SPEC` via
 `git rev-parse --parseopt`, which normalizes `"$@"` (expanding short/long
 flags to a canonical form, handling `--help`) and terminates the option list
-with `--`, ready for the `while`/`case` loop shown above.
+with `--`, ready for the `while`/`case` loop shown above. With
+`OPTIONS_STUCKLONG` set, options that take a value (short or long) are always
+normalized to a single `--longname=value` token - match it with a `case`
+pattern like `--output=*) output=${1#--output=} ;;`, not a two-token
+`shift; output=$1` form.
 
 ## Helper functions available after sourcing
 
-`usage`, `die`, `say`, `require_work_tree`, `cd_to_toplevel`,
-`is_bare_repository`, `get_author_ident_from_commit`.
+`die`, `die_with_status`, `usage` (generated from `OPTIONS_SPEC`/`USAGE`),
+`cd_to_toplevel`, `require_work_tree`, `require_work_tree_exists`,
+`require_clean_work_tree <action>`, `is_bare_repository`,
+`get_author_ident_from_commit`, `set_reflog_action`, `git_editor`, `git_pager`.
+There is no `say` helper - use `echo` for informational output.
 
 ## Verifying the result
 

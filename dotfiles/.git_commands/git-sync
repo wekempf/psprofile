@@ -1,0 +1,99 @@
+#!/bin/sh
+
+OPTIONS_KEEPDASHDASH=
+OPTIONS_STUCKLONG=t
+OPTIONS_SPEC="\
+git sync [options]
+
+Pulls the current branch's remote changes, then rebases it onto the parent
+branch. If the current branch already is the parent branch, only the pull
+is performed.
+--
+h,help           show the help
+parent-branch=   branch to rebase onto (default: remote's HEAD branch, else master/main/trunk)
+"
+SUBDIRECTORY_OK="yes" . "$(git --exec-path)/git-sh-setup"
+
+parent_branch=
+
+while test $# != 0
+do
+    case "$1" in
+    --parent-branch=*) parent_branch=${1#--parent-branch=} ;;
+    --) shift; break ;;
+    *) usage ;;
+    esac
+    shift
+done
+
+require_work_tree
+cd_to_toplevel
+require_clean_work_tree sync
+
+current_branch=$(git symbolic-ref --short -q HEAD) ||
+    die "Not currently on a branch (detached HEAD); check out a branch first."
+
+# Prefer the current branch's configured remote; fall back to 'origin', then
+# to the sole remote if there's exactly one configured.
+remote=$(git config --get "branch.$current_branch.remote")
+if [ -z "$remote" ]; then
+    if git remote get-url origin >/dev/null 2>&1; then
+        remote=origin
+    else
+        remote_list=$(git remote)
+        remote_count=$(printf '%s\n' "$remote_list" | grep -c .)
+        if [ "$remote_count" = 1 ]; then
+            remote=$remote_list
+        else
+            die "Unable to determine which remote to use; no 'origin' remote and no single configured remote."
+        fi
+    fi
+fi
+
+git remote get-url "$remote" >/dev/null 2>&1 ||
+    die "Remote '$remote' is not configured."
+
+echo "Fetching '$remote'..."
+git fetch "$remote" || die "git fetch '$remote' failed."
+
+# Determine the parent branch unless given explicitly via --parent-branch.
+if [ -z "$parent_branch" ]; then
+    default_ref=$(git symbolic-ref --short -q "refs/remotes/$remote/HEAD")
+    if [ -n "$default_ref" ]; then
+        parent_branch=${default_ref#"$remote"/}
+    fi
+fi
+
+if [ -z "$parent_branch" ]; then
+    for candidate in master main trunk; do
+        if git show-ref --verify --quiet "refs/remotes/$remote/$candidate"; then
+            parent_branch=$candidate
+            break
+        fi
+    done
+fi
+
+[ -n "$parent_branch" ] ||
+    die "Unable to determine the parent branch (no remote HEAD set, and none of master/main/trunk exist on '$remote'); specify --parent-branch."
+
+git show-ref --verify --quiet "refs/remotes/$remote/$parent_branch" ||
+    die "Parent branch '$parent_branch' does not exist on remote '$remote'."
+
+if [ "$current_branch" = "$parent_branch" ]; then
+    echo "On parent branch '$parent_branch'; pulling..."
+    git merge --ff-only "$remote/$parent_branch" ||
+        die "'$current_branch' has diverged from '$remote/$parent_branch' and can't be fast-forwarded; resolve manually."
+    exit 0
+fi
+
+upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "$current_branch@{u}" 2>/dev/null)
+if [ -n "$upstream" ]; then
+    echo "Pulling '$current_branch' from '$upstream'..."
+    git merge --ff-only "$upstream" ||
+        die "'$current_branch' has diverged from '$upstream' and can't be fast-forwarded; resolve manually before rebasing."
+else
+    echo "'$current_branch' has no upstream configured; skipping pull."
+fi
+
+echo "Rebasing '$current_branch' onto '$remote/$parent_branch'..."
+git rebase "$remote/$parent_branch"
