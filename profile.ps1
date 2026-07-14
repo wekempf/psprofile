@@ -25,6 +25,46 @@ function Import-RequiredModule {
     }
 }
 
+# Use $PSScriptRoot (the real location of this script) rather than $profile, so this
+# still resolves correctly when $PROFILE is a stub that dot-sources us from elsewhere
+# (e.g. when this repo lives outside OneDrive on a machine where OneDrive redirects
+# Documents). On machines without that indirection, $PSScriptRoot and $profile's
+# directory are the same thing anyway.
+Set-Variable -Name ProfileDir -Value $PSScriptRoot
+Set-Variable -Name ModuleDir -Value (Join-Path $ProfileDir 'Modules')
+
+# The OS/edition-specific default location Install-Module -Scope CurrentUser writes
+# to. On a machine where this repo lives at its "natural" location (no redirection/
+# migration performed), this is the same folder as $ModuleDir, so everything below
+# is a no-op. On a machine where the profile has been moved out of a redirected
+# Documents folder (e.g. to avoid OneDrive sync overhead), this points at the
+# original (possibly cloud-synced) location, while $ModuleDir points at the faster
+# local copy.
+$DefaultModuleDir = Join-Path (Split-Path $PROFILE.CurrentUserAllHosts) 'Modules'
+if ($DefaultModuleDir -ne $ModuleDir) {
+    # Make sure modules living alongside this profile are discovered/imported from
+    # here instead of falling through to (and potentially reinstalling into) the
+    # default location.
+    if ($env:PSModulePath -notlike "*$ModuleDir*") {
+        $env:PSModulePath = "$ModuleDir$([System.IO.Path]::PathSeparator)$env:PSModulePath"
+    }
+
+    # Pick up modules that were installed manually (outside this profile) into the
+    # default location - e.g. via `Install-Module -Scope CurrentUser` typed directly
+    # at a prompt, which always writes there regardless of $env:PSModulePath - by
+    # copying them into $ModuleDir. This is a cheap, top-level-only folder-name
+    # comparison, so it costs almost nothing when there's nothing new to copy.
+    if (Test-Path $DefaultModuleDir) {
+        $existingModules = if (Test-Path $ModuleDir) { (Get-ChildItem $ModuleDir -Directory).Name } else { @() }
+        Get-ChildItem $DefaultModuleDir -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notin $existingModules } |
+            ForEach-Object {
+                Write-Host -ForegroundColor Blue "Copying module '$($_.Name)' to local profile Modules folder..."
+                Copy-Item $_.FullName (Join-Path $ModuleDir $_.Name) -Recurse -Force
+            }
+    }
+}
+
 # Dot source functions
 (Join-Path $PSScriptRoot 'Functions'), (Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
     Where-Object { Test-Path $_ } |
@@ -50,13 +90,6 @@ elseif ($IsLinux) {
 Write-Figlet $script:ComputerName -Font big -Foreground ($IsAdmin ? 'Red' : 'Blue')
 
 # Configure environment variables
-# Use $PSScriptRoot (the real location of this script) rather than $profile, so this
-# still resolves correctly when $PROFILE is a stub that dot-sources us from elsewhere
-# (e.g. when this repo lives outside OneDrive on a machine where OneDrive redirects
-# Documents). On machines without that indirection, $PSScriptRoot and $profile's
-# directory are the same thing anyway.
-Set-Variable -Name ProfileDir -Value $PSScriptRoot
-Set-Variable -Name ModuleDir -Value (Join-Path $ProfileDir 'Modules')
 if (Get-Command -Name code -ErrorAction SilentlyContinue) {
     $env:EDITOR = 'code'
 }
