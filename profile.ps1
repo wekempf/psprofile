@@ -144,8 +144,14 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
 }
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    # Setup zoxide
-    Invoke-Expression (& { (zoxide init powershell --cmd z --hook pwd | Out-String) })
+    # Setup zoxide. The `zoxide init` output is cached to disk (see Invoke-CachedInit)
+    # so most startups just read a file instead of spawning a process - each spawned
+    # process on this machine gets EDR-intercepted, adding real latency.
+    # To back this out: replace the Invoke-CachedInit call with
+    #   Invoke-Expression (& { (zoxide init powershell --cmd z --hook pwd | Out-String) })
+    Invoke-CachedInit -Name 'zoxide-init' -SourceCommand zoxide -Generate {
+        zoxide init powershell --cmd z --hook pwd | Out-String
+    }
     Set-Alias -Name cd -Value z -Option AllScope
     Register-ArgumentCompleter -CommandName z -Native -ScriptBlock {
         param($stringMatch)
@@ -186,8 +192,15 @@ else {
 }
 
 if (Get-Command -Name dsc -ErrorAction SilentlyContinue) {
+    # The `dsc completer` output is cached to disk (see Invoke-CachedInit) so most
+    # startups just read a file instead of spawning a process - each spawned process
+    # on this machine gets EDR-intercepted, adding real latency.
+    # To back this out: replace the Invoke-CachedInit call with
+    #   dsc completer powershell | Out-String | Invoke-Expression
     Write-Host -ForegroundColor Blue "Registering argument completer for 'dsc'..."
-    dsc completer powershell | Out-String | Invoke-Expression
+    Invoke-CachedInit -Name 'dsc-completer' -SourceCommand dsc -Generate {
+        dsc completer powershell | Out-String
+    }
 }
 
 if (Get-Command -Name winget -ErrorAction SilentlyContinue) {
