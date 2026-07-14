@@ -50,7 +50,12 @@ elseif ($IsLinux) {
 Write-Figlet $script:ComputerName -Font big -Foreground ($IsAdmin ? 'Red' : 'Blue')
 
 # Configure environment variables
-Set-Variable -Name ProfileDir -Value (Split-Path $profile)
+# Use $PSScriptRoot (the real location of this script) rather than $profile, so this
+# still resolves correctly when $PROFILE is a stub that dot-sources us from elsewhere
+# (e.g. when this repo lives outside OneDrive on a machine where OneDrive redirects
+# Documents). On machines without that indirection, $PSScriptRoot and $profile's
+# directory are the same thing anyway.
+Set-Variable -Name ProfileDir -Value $PSScriptRoot
 Set-Variable -Name ModuleDir -Value (Join-Path $ProfileDir 'Modules')
 if (Get-Command -Name code -ErrorAction SilentlyContinue) {
     $env:EDITOR = 'code'
@@ -248,6 +253,7 @@ if (Get-Command -Name flightplan -ErrorAction SilentlyContinue) {
 }
 
 # Display notice if there's profile changes
+# git status is fast (local); git fetch runs in background to avoid blocking startup
 Push-Location $ProfileDir
 try {
     if (Get-Command -Name git -ErrorAction SilentlyContinue) {
@@ -255,18 +261,44 @@ try {
             Write-Warning 'Profile changes need to be committed and pushed'
         }
         else {
-            git fetch
-            if ((git rev-list --count origin..HEAD) -gt 0) {
-                Write-Warning 'Local profile changes need to be pushed'
-            }
-            elseif ((git rev-list --count HEAD..origin) -gt 0) {
-                Write-Warning 'Remote profile changes need to be merged'
-            }
+            $global:_ProfileGitJob = Start-Job -ScriptBlock {
+                param($dir)
+                Set-Location $dir
+                git fetch 2>&1 | Out-Null
+                [PSCustomObject]@{
+                    Ahead  = [int](git rev-list --count origin..HEAD 2>$null)
+                    Behind = [int](git rev-list --count HEAD..origin 2>$null)
+                }
+            } -ArgumentList $ProfileDir
         }
     }
 }
 finally {
     Pop-Location
+}
+
+# Wrap prompt to display the fetch result once the background job completes
+# NOTE: capture the ScriptBlock (not the FunctionInfo) - invoking a FunctionInfo via
+# `&` re-resolves "prompt" by name, which after Set-Item below would recurse into the
+# wrapper itself and blow the call stack instead of calling the original prompt.
+$global:_origPromptFn = (Get-Item Function:\prompt).ScriptBlock
+Set-Item Function:\prompt -Value {
+    if ($global:_ProfileGitJob -and $global:_ProfileGitJob.State -ne 'Running') {
+        try {
+            $r = Receive-Job $global:_ProfileGitJob -ErrorAction SilentlyContinue
+            if ($r.Ahead -gt 0) {
+                Write-Warning 'Local profile changes need to be pushed'
+            }
+            elseif ($r.Behind -gt 0) {
+                Write-Warning 'Remote profile changes need to be merged'
+            }
+        }
+        finally {
+            Remove-Job $global:_ProfileGitJob -Force
+            $global:_ProfileGitJob = $null
+        }
+    }
+    & $global:_origPromptFn
 }
 
 # Copilot aliases

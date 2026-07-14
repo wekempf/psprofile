@@ -19,7 +19,7 @@ function Edit-Profile {
             throw "Editing the profile project requires Visual Studio Code which cannot be located."
         }
 
-        code (Split-Path ($Profile.CurrentUserAllHosts))
+        code $ProfileDir
     } else {
         $editor = $env:Editor
         if (-not $editor) {

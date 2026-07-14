@@ -1,5 +1,5 @@
 function Set-ProfileLocation {
-    Set-Location (Split-Path ($Profile.CurrentUserAllHosts))
+    Set-Location $ProfileDir
 }
 
 Set-Alias -Name cdpro -Value Set-ProfileLocation
