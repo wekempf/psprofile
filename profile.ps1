@@ -264,14 +264,16 @@ try {
         }
         else {
             try {
-                $global:_ProfileGitFetchLog = [System.IO.Path]::GetTempFileName()
+                $global:_ProfileGitFetchOutLog = [System.IO.Path]::GetTempFileName()
+                $global:_ProfileGitFetchErrLog = [System.IO.Path]::GetTempFileName()
                 $global:_ProfileGitFetchProcess = Start-Process -FilePath git -ArgumentList 'fetch' `
                     -WorkingDirectory $ProfileDir -WindowStyle Hidden -PassThru `
-                    -RedirectStandardOutput $global:_ProfileGitFetchLog -RedirectStandardError $global:_ProfileGitFetchLog
+                    -RedirectStandardOutput $global:_ProfileGitFetchOutLog -RedirectStandardError $global:_ProfileGitFetchErrLog
             }
             catch {
-                Remove-Item $global:_ProfileGitFetchLog -Force -ErrorAction SilentlyContinue
-                $global:_ProfileGitFetchLog = $null
+                Remove-Item $global:_ProfileGitFetchOutLog, $global:_ProfileGitFetchErrLog -Force -ErrorAction SilentlyContinue
+                $global:_ProfileGitFetchOutLog = $null
+                $global:_ProfileGitFetchErrLog = $null
                 $global:_ProfileGitFetchProcess = $null
             }
         }
@@ -301,9 +303,10 @@ Set-Item Function:\prompt -Value {
         }
         finally {
             Pop-Location
-            Remove-Item $global:_ProfileGitFetchLog -Force -ErrorAction SilentlyContinue
+            Remove-Item $global:_ProfileGitFetchOutLog, $global:_ProfileGitFetchErrLog -Force -ErrorAction SilentlyContinue
             $global:_ProfileGitFetchProcess = $null
-            $global:_ProfileGitFetchLog = $null
+            $global:_ProfileGitFetchOutLog = $null
+            $global:_ProfileGitFetchErrLog = $null
         }
     }
     & $global:_origPromptFn
