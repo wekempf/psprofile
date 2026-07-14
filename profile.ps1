@@ -1,4 +1,3 @@
-# Detect elevation
 $IsAdmin = & {
     if ($IsWindows) {
         $wid = [System.Security.Principal.WindowsIdentity]::GetCurrent()
@@ -25,35 +24,23 @@ function Import-RequiredModule {
     }
 }
 
-# Use $PSScriptRoot (the real location of this script) rather than $profile, so this
-# still resolves correctly when $PROFILE is a stub that dot-sources us from elsewhere
-# (e.g. when this repo lives outside OneDrive on a machine where OneDrive redirects
-# Documents). On machines without that indirection, $PSScriptRoot and $profile's
-# directory are the same thing anyway.
+# $PSScriptRoot (not $profile) so this still resolves when $PROFILE is a stub
+# that dot-sources us from a different (e.g. OneDrive-redirected) location.
 Set-Variable -Name ProfileDir -Value $PSScriptRoot
 Set-Variable -Name ModuleDir -Value (Join-Path $ProfileDir 'Modules')
 
-# The OS/edition-specific default location Install-Module -Scope CurrentUser writes
-# to. On a machine where this repo lives at its "natural" location (no redirection/
-# migration performed), this is the same folder as $ModuleDir, so everything below
-# is a no-op. On a machine where the profile has been moved out of a redirected
-# Documents folder (e.g. to avoid OneDrive sync overhead), this points at the
-# original (possibly cloud-synced) location, while $ModuleDir points at the faster
-# local copy.
+# On machines where the profile has been moved out of a redirected Documents
+# folder, $DefaultModuleDir (where Install-Module -Scope CurrentUser writes)
+# differs from $ModuleDir (the faster local copy); on unmigrated machines
+# they're the same and this whole block is a no-op.
 $DefaultModuleDir = Join-Path (Split-Path $PROFILE.CurrentUserAllHosts) 'Modules'
 if ($DefaultModuleDir -ne $ModuleDir) {
-    # Make sure modules living alongside this profile are discovered/imported from
-    # here instead of falling through to (and potentially reinstalling into) the
-    # default location.
     if ($env:PSModulePath -notlike "*$ModuleDir*") {
         $env:PSModulePath = "$ModuleDir$([System.IO.Path]::PathSeparator)$env:PSModulePath"
     }
 
-    # Pick up modules that were installed manually (outside this profile) into the
-    # default location - e.g. via `Install-Module -Scope CurrentUser` typed directly
-    # at a prompt, which always writes there regardless of $env:PSModulePath - by
-    # copying them into $ModuleDir. This is a cheap, top-level-only folder-name
-    # comparison, so it costs almost nothing when there's nothing new to copy.
+    # Picks up modules installed manually via `Install-Module -Scope CurrentUser`,
+    # which always writes to $DefaultModuleDir regardless of $env:PSModulePath.
     if (Test-Path $DefaultModuleDir) {
         $existingModules = if (Test-Path $ModuleDir) { (Get-ChildItem $ModuleDir -Directory).Name } else { @() }
         Get-ChildItem $DefaultModuleDir -Directory -ErrorAction SilentlyContinue |
@@ -65,21 +52,10 @@ if ($DefaultModuleDir -ne $ModuleDir) {
     }
 }
 
-# Dot source functions
-#
-# Dot-sourcing ~35 separate files has a real, mostly constant per-file cost
-# (observed ~60-200ms/file on this machine, almost certainly EDR scan-on-open
-# overhead) that adds up to several seconds total. To avoid that, most files
-# are concatenated into a single cached file that gets dot-sourced once, and
-# only regenerated when the set of source files or their content changes.
-#
-# A few files are deliberately excluded from combination because they rely on
-# $PSScriptRoot/$PSCommandPath resolving to *their own* file's location (e.g.
-# to find a sibling folder, or to re-invoke themselves standalone via a
-# scheduled task with -NoProfile). Combining them would silently change that
-# to the cache file's location instead. If you add a new Functions file that
-# depends on $PSScriptRoot, $PSCommandPath, or $MyInvocation.MyCommand.Path,
-# add its name to $script:UncombinableFunctionFiles below.
+# Dot-sourcing ~35 files costs several seconds (EDR scan-on-open overhead per
+# file), so most are concatenated into one cached file, regenerated only when
+# the source files change. Files that depend on $PSScriptRoot/$PSCommandPath
+# resolving to their own location are excluded here and dot-sourced directly.
 $script:UncombinableFunctionFiles = @(
     'ConvertTo-ASCIIArt.ps1'
     'Update-WinGet.ps1'
@@ -96,8 +72,7 @@ $allFunctionFiles = $functionFolders | ForEach-Object { Get-ChildItem (Join-Path
 $combinableFiles = $allFunctionFiles | Where-Object { $_.Name -notin $script:UncombinableFunctionFiles }
 $uncombinableFiles = $allFunctionFiles | Where-Object { $_.Name -in $script:UncombinableFunctionFiles }
 
-# Cheap signature (name + last-write-time per file) to detect added/removed/modified
-# files without reading file contents.
+# Signature (name + last-write-time) avoids reading file contents to detect changes.
 $signature = ($combinableFiles | Sort-Object FullName | ForEach-Object { "$($_.FullName):$($_.LastWriteTimeUtc.Ticks)" }) -join '|'
 $cachedSignature = if (Test-Path $FunctionsCacheFile) { (Get-Content $FunctionsCacheFile -TotalCount 1) -replace '^# SIGNATURE: ', '' } else { $null }
 
@@ -121,7 +96,6 @@ foreach ($file in $uncombinableFiles) {
     . $file.FullName
 }
 
-# Write banner
 if ($IsWindows) {
     $script:ComputerName = $env:COMPUTERNAME
 }
@@ -134,18 +108,9 @@ elseif ($IsLinux) {
     }
 }
 
-# Import-RequiredModule Figlet + Write-Figlet costs roughly 1.2-1.4s on this machine
-# (almost entirely the module import - Figlet is a compiled .NET module bundling ~150
-# font .zip files). The rendered banner only ever changes if the hostname or font
-# changes, so the plain (uncolored) ASCII art is cached to a local, non-git,
-# machine-specific file and reused on every startup after the first; colors are still
-# applied fresh each run based on the current $IsAdmin state.
-#
-# Write-Figlet writes its colored output directly to the host UI rather than through
-# the normal success/output stream, so it can't be captured by piping to Out-String in
-# this process - capturing it requires real stdout redirection from a separate
-# process. That one-time cost only happens on a cache miss (first run on a machine, or
-# after the hostname/font changes).
+# Import-Module Figlet costs ~1.2-1.4s (compiled .NET module bundling ~150 font
+# .zip files). The rendered banner only changes with hostname/font, so the plain
+# text is cached and colorized fresh each run based on $IsAdmin.
 $FigletFont = 'big'
 $FigletCacheDir = Join-Path $env:LOCALAPPDATA 'psprofile\cache'
 $FigletCacheFile = Join-Path $FigletCacheDir "figlet-$script:ComputerName-$FigletFont.txt"
@@ -154,11 +119,8 @@ if (-not (Test-Path $FigletCacheFile) -or (Get-Item $FigletCacheFile).Length -eq
     if (-not (Test-Path $FigletCacheDir)) {
         New-Item -ItemType Directory -Path $FigletCacheDir -Force | Out-Null
     }
-    # $env:PSModulePath already includes $ModuleDir (set above) and is inherited by
-    # this child process, so Figlet resolves by name without a hardcoded version path.
-    # Casting the Write-Figlet result to [string] gives the plain rendered text
-    # (ToString(), no color codes) directly, avoiding the extra blank separator lines
-    # that Out-String/default formatting inserts between rows.
+    # Write-Figlet writes directly to the host UI, so it can't be captured
+    # in-process - a separate process with real stdout redirection is needed.
     $genScript = "Import-Module Figlet; [string](Write-Figlet '$script:ComputerName' -Font $FigletFont)"
     & pwsh -NoProfile -Command $genScript *> $FigletCacheFile
 }
@@ -167,7 +129,6 @@ Get-Content $FigletCacheFile | ForEach-Object {
     Write-Host $_ -ForegroundColor ($IsAdmin ? 'Red' : 'Blue')
 }
 
-# Configure environment variables
 if (Get-Command -Name code -ErrorAction SilentlyContinue) {
     $env:EDITOR = 'code'
 }
@@ -177,22 +138,18 @@ else {
     }
 }
 
-# If we have a bin folder add it to the path
 if (Test-Path ~/bin) {
     Add-Path ~/bin
 }
 
-# If we have a scripts folder add it to the path
 if (Test-Path $PSScriptRoot/scripts) {
     Add-Path $PSScriptRoot/scripts
 }
 
-# If we have a ~/.git_commands folder at it to the path
 if (Test-Path ~/.git_commands) {
     Add-Path ~/.git_commands
 }
 
-# Create SymLinks for dotfiles
 if ($IsWindows) {
     foreach ($dotfile in (Get-ChildItem -File -Path (Join-Path $PSScriptRoot 'dotfiles'))) {
         $destination = Join-Path ~ (Split-Path -Leaf $dotfile)
@@ -220,18 +177,11 @@ if ($IsWindows) {
     }
 }
 
-# posh-git's module import costs ~2.3s here - the single largest startup cost
-# measured on this machine, bigger than the Figlet import or Functions dot-source
-# combined. Its prompt integration isn't used (customprompt.ps1 has its own
-# git-status logic), only its git/tgit/gitk tab completion, so instead of importing
-# it eagerly every startup, register a lightweight stub completer that imports the
-# real module (and pays that cost) only the first time a git command is actually
-# tab-completed in a session - which may never happen. Register-ArgumentCompleter
-# replaces any existing registration for the same command name, and posh-git
-# registers its own real completer for the same commands when it imports, so after
-# the first real completion, subsequent ones go straight to posh-git's own
-# implementation, not this stub.
-# To back this out: replace this block with `Import-RequiredModule posh-git`.
+# posh-git's import costs ~2.3s; we only use its git/tgit/gitk tab completion,
+# not its prompt integration, so defer the import to first actual tab-completion
+# use. Register-ArgumentCompleter replaces this stub with posh-git's own real
+# completer once it imports, so this only runs once per session at most.
+# To back out: replace this block with `Import-RequiredModule posh-git`.
 Register-ArgumentCompleter -CommandName git, tgit, gitk, g -Native -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
     if (-not (Get-Module posh-git)) {
@@ -251,11 +201,9 @@ Register-ArgumentCompleter -CommandName git, tgit, gitk, g -Native -ScriptBlock 
 
 . (Join-Path $PSScriptRoot psreadlinecfg.ps1)
 
-# Setup our DynamicTitle
 #. (Join-Path $PSScriptRoot DynamicTitle.ps1)
 
 if (Get-Command fzf -ErrorAction SilentlyContinue) {
-    # Setup fzf
     Import-RequiredModule PSFzf
     Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r' -PSReadlineChordSetLocation 'Ctrl+l'
     Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
@@ -275,10 +223,9 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
 }
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    # Setup zoxide. The `zoxide init` output is cached to disk (see Invoke-CachedInit)
-    # so most startups just read a file instead of spawning a process - each spawned
-    # process on this machine gets EDR-intercepted, adding real latency.
-    # To back this out: replace the Invoke-CachedInit call with
+    # zoxide init spawns a process, which is EDR-intercepted (real latency), so the
+    # output is cached to disk (see Invoke-CachedInit) instead of regenerated every
+    # startup. To back out: replace with
     #   Invoke-Expression (& { (zoxide init powershell --cmd z --hook pwd | Out-String) })
     Invoke-CachedInit -Name 'zoxide-init' -SourceCommand zoxide -Generate {
         zoxide init powershell --cmd z --hook pwd | Out-String
@@ -296,7 +243,6 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
 }
 
 if (Get-Command bat -ErrorAction SilentlyContinue) {
-    # Setup bat
     $env:BAT_THEME = 'Nord'
     $env:BAT_STYLE = 'changes,header,numbers'
 }
@@ -308,7 +254,6 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
     }
 }
 
-# PowerShell parameter completion shim for the dotnet CLI 
 if (Get-Command -Name dotnet -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'dotnet'..."
     Register-ArgumentCompleter -Native -CommandName dotnet -ScriptBlock {
@@ -323,10 +268,8 @@ else {
 }
 
 if (Get-Command -Name dsc -ErrorAction SilentlyContinue) {
-    # The `dsc completer` output is cached to disk (see Invoke-CachedInit) so most
-    # startups just read a file instead of spawning a process - each spawned process
-    # on this machine gets EDR-intercepted, adding real latency.
-    # To back this out: replace the Invoke-CachedInit call with
+    # dsc completer spawns a process, which is EDR-intercepted, so it's cached
+    # to disk (see Invoke-CachedInit). To back out: replace with
     #   dsc completer powershell | Out-String | Invoke-Expression
     Write-Host -ForegroundColor Blue "Registering argument completer for 'dsc'..."
     Invoke-CachedInit -Name 'dsc-completer' -SourceCommand dsc -Generate {
@@ -350,7 +293,6 @@ else {
     Write-Information "Command 'winget' not found."
 }
 
-# PowerShell parameter completion shim for the nuke CLI 
 if (Get-Command -Name nuke -ErrorAction SilentlyContinue) {
     Write-Host -ForegroundColor Blue "Registering argument completer for 'nuke'..."
     Register-ArgumentCompleter -Native -CommandName nuke -ScriptBlock {
@@ -375,19 +317,16 @@ if (Get-Command -Name npm -ErrorAction SilentlyContinue) {
 # Hopefully temporary fix for "dotnet new" slowness (https://github.com/dotnet/templating/issues/2093)
 #$env:DOTNET_NEW_LOCAL_SEARCH_FILE_ONLY = 1
 
-# Invoke machine specific profile
 @(Join-Path $PSScriptRoot "machine\${env:COMPUTERNAME}\$($MyInvocation.MyCommand.Name)") |
     Where-Object { Test-Path $_ } |
     ForEach-Object { . $_ }
 
-# Set an alias for invoking build.ps1 scripts in the current location
 Set-Alias -Name b -Value './build.ps1'
 
 if ($IsLinux) {
     Set-Alias -Name ls -Value Get-ChildItem
 }
 
-# Source ~/.container/profile.ps1 if we're running in a container
 if ((Test-Path '/.dockerenv') -and (Test-Path ~/.container/profile.ps1)) {
     . ~/.container/profile.ps1
 }
@@ -396,10 +335,9 @@ if (Get-Command -Name flightplan -ErrorAction SilentlyContinue) {
     Set-Alias -Name fp -Value flightplan
 }
 
-# Display notice if there's profile changes
-# git status is fast (local); git fetch runs in a background process (not a PowerShell
-# job - Start-Job requires a runspace and fails under ConstrainedLanguage mode, which is
-# enforced on some locked-down machines) to avoid blocking startup.
+# git status is fast (local); git fetch runs via Start-Process (not Start-Job,
+# which requires a runspace and fails under ConstrainedLanguage mode on some
+# locked-down machines) to avoid blocking startup.
 Push-Location $ProfileDir
 try {
     if (Get-Command -Name git -ErrorAction SilentlyContinue) {
@@ -427,10 +365,9 @@ finally {
     Pop-Location
 }
 
-# Wrap prompt to display the fetch result once the background process completes
-# NOTE: capture the ScriptBlock (not the FunctionInfo) - invoking a FunctionInfo via
-# `&` re-resolves "prompt" by name, which after Set-Item below would recurse into the
-# wrapper itself and blow the call stack instead of calling the original prompt.
+# NOTE: capture the ScriptBlock (not the FunctionInfo) - invoking a FunctionInfo
+# via `&` re-resolves "prompt" by name, which after Set-Item below would recurse
+# into the wrapper itself and blow the call stack.
 $global:_origPromptFn = (Get-Item Function:\prompt).ScriptBlock
 Set-Item Function:\prompt -Value {
     if ($global:_ProfileGitFetchProcess -and $global:_ProfileGitFetchProcess.HasExited) {
@@ -456,7 +393,6 @@ Set-Item Function:\prompt -Value {
     & $global:_origPromptFn
 }
 
-# Copilot aliases
 if (Get-Command -Name copilot -ErrorAction SilentlyContinue) {
     function co { copilot --model claude-sonnet-4.5 @args }
     function coy { copilot --model claude-sonnet-4.5 --allow-all-tools @args }
