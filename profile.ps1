@@ -66,13 +66,60 @@ if ($DefaultModuleDir -ne $ModuleDir) {
 }
 
 # Dot source functions
-(Join-Path $PSScriptRoot 'Functions'), (Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
-    Where-Object { Test-Path $_ } |
-    ForEach-Object {
-        Get-ChildItem (Join-Path $_ '*.ps1') | ForEach-Object {
-            . $_.FullName
-        }
+#
+# Dot-sourcing ~35 separate files has a real, mostly constant per-file cost
+# (observed ~60-200ms/file on this machine, almost certainly EDR scan-on-open
+# overhead) that adds up to several seconds total. To avoid that, most files
+# are concatenated into a single cached file that gets dot-sourced once, and
+# only regenerated when the set of source files or their content changes.
+#
+# A few files are deliberately excluded from combination because they rely on
+# $PSScriptRoot/$PSCommandPath resolving to *their own* file's location (e.g.
+# to find a sibling folder, or to re-invoke themselves standalone via a
+# scheduled task with -NoProfile). Combining them would silently change that
+# to the cache file's location instead. If you add a new Functions file that
+# depends on $PSScriptRoot, $PSCommandPath, or $MyInvocation.MyCommand.Path,
+# add its name to $script:UncombinableFunctionFiles below.
+$script:UncombinableFunctionFiles = @(
+    'ConvertTo-ASCIIArt.ps1'
+    'Update-WinGet.ps1'
+    'Use-PromptTheme.ps1'
+)
+
+$FunctionsCacheDir = Join-Path $env:LOCALAPPDATA 'psprofile\cache'
+$FunctionsCacheFile = Join-Path $FunctionsCacheDir 'functions-combined.ps1'
+
+$functionFolders = (Join-Path $PSScriptRoot 'Functions'), (Join-Path $PSScriptRoot "${env:COMPUTERNAME}\Functions") |
+    Where-Object { Test-Path $_ }
+
+$allFunctionFiles = $functionFolders | ForEach-Object { Get-ChildItem (Join-Path $_ '*.ps1') }
+$combinableFiles = $allFunctionFiles | Where-Object { $_.Name -notin $script:UncombinableFunctionFiles }
+$uncombinableFiles = $allFunctionFiles | Where-Object { $_.Name -in $script:UncombinableFunctionFiles }
+
+# Cheap signature (name + last-write-time per file) to detect added/removed/modified
+# files without reading file contents.
+$signature = ($combinableFiles | Sort-Object FullName | ForEach-Object { "$($_.FullName):$($_.LastWriteTimeUtc.Ticks)" }) -join '|'
+$cachedSignature = if (Test-Path $FunctionsCacheFile) { (Get-Content $FunctionsCacheFile -TotalCount 1) -replace '^# SIGNATURE: ', '' } else { $null }
+
+if ($signature -ne $cachedSignature) {
+    if (-not (Test-Path $FunctionsCacheDir)) {
+        New-Item -ItemType Directory -Path $FunctionsCacheDir -Force | Out-Null
     }
+    $combined = New-Object System.Text.StringBuilder
+    [void]$combined.AppendLine("# SIGNATURE: $signature")
+    foreach ($file in $combinableFiles) {
+        [void]$combined.AppendLine("# --- $($file.FullName) ---")
+        [void]$combined.AppendLine((Get-Content $file.FullName -Raw))
+    }
+    Set-Content -Path $FunctionsCacheFile -Value $combined.ToString() -NoNewline
+}
+
+if ($combinableFiles) {
+    . $FunctionsCacheFile
+}
+foreach ($file in $uncombinableFiles) {
+    . $file.FullName
+}
 
 # Write banner
 Import-RequiredModule Figlet -AllowClobber
